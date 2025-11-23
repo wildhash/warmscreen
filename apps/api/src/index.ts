@@ -22,6 +22,8 @@ const envSchema = {
     LIVEKIT_API_KEY: { type: 'string' },
     LIVEKIT_API_SECRET: { type: 'string' },
     DEEPGRAM_API_KEY: { type: 'string' },
+    ELEVENLABS_API_KEY: { type: 'string' },
+    INTERVIEWER_VOICE_ID: { type: 'string' },
   },
 };
 
