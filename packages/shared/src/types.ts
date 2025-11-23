@@ -1,12 +1,15 @@
 // Agent Types
-export type AgentType = 
-  | 'ANALYZER' 
-  | 'VERIFIER' 
-  | 'PLANNER' 
-  | 'CONDUCTOR' 
-  | 'TAGGER' 
-  | 'SCORER' 
-  | 'NARRATOR';
+export const AGENT_TYPES = {
+  ANALYZER: 'ANALYZER',
+  VERIFIER: 'VERIFIER',
+  PLANNER: 'PLANNER',
+  CONDUCTOR: 'CONDUCTOR',
+  TAGGER: 'TAGGER',
+  SCORER: 'SCORER',
+  NARRATOR: 'NARRATOR',
+} as const;
+
+export type AgentType = typeof AGENT_TYPES[keyof typeof AGENT_TYPES];
 
 export interface AgentInput {
   type: AgentType;

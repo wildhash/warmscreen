@@ -1,6 +1,19 @@
 import { BaseAgent } from './base-agent';
 import { AgentInput, AgentOutput } from '@warmscreen/shared';
 
+export interface VerificationCheck {
+  name: string;
+  passed: boolean;
+  message: string;
+}
+
+export interface VerificationResult {
+  verified: boolean;
+  checks: VerificationCheck[];
+  issuesFound: number;
+  recommendations: string[];
+}
+
 /**
  * Verifier Agent
  * Verifies the accuracy and consistency of other agents' outputs
@@ -28,8 +41,8 @@ export class VerifierAgent extends BaseAgent {
     return output;
   }
 
-  private async verifyOutputs(agentOutputs: AgentOutput[]): Promise<any> {
-    const checks = [];
+  private async verifyOutputs(agentOutputs: AgentOutput[]): Promise<VerificationResult> {
+    const checks: VerificationCheck[] = [];
     
     // Check consistency across agents
     const confidences = agentOutputs.map(o => o.confidence);
@@ -61,8 +74,8 @@ export class VerifierAgent extends BaseAgent {
     };
   }
 
-  private calculateVerificationConfidence(verification: any): number {
-    const passedChecks = verification.checks.filter((c: any) => c.passed).length;
+  private calculateVerificationConfidence(verification: VerificationResult): number {
+    const passedChecks = verification.checks.filter(c => c.passed).length;
     const totalChecks = verification.checks.length;
     return totalChecks > 0 ? passedChecks / totalChecks : 0.5;
   }
