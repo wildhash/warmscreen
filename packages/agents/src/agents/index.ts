@@ -5,3 +5,4 @@ export * from './planner';
 export * from './tagger';
 export * from './scorer';
 export * from './narrator';
+export * from './voice-interviewer';

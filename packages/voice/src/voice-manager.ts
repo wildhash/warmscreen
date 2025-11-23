@@ -1,25 +1,33 @@
 import { LiveKitManager, LiveKitConfig } from './livekit';
 import { DeepgramManager, DeepgramConfig } from './deepgram';
+import { ElevenLabsManager, ElevenLabsConfig } from './elevenlabs-tts';
 import { AudioTranscript } from '@warmscreen/shared';
 
 export interface VoiceManagerConfig {
   livekit: LiveKitConfig;
   deepgram: DeepgramConfig;
+  elevenlabs?: ElevenLabsConfig;
 }
 
 /**
  * VoiceManager
- * Integrates LiveKit for voice communication and Deepgram for STT
+ * Integrates LiveKit for voice communication, Deepgram for STT, and ElevenLabs for TTS
  */
 export class VoiceManager {
   private livekit: LiveKitManager;
   private deepgram: DeepgramManager;
+  private elevenlabs?: ElevenLabsManager;
   private transcripts: AudioTranscript[] = [];
   private onTranscriptCallback?: (transcript: AudioTranscript) => void;
 
   constructor(config: VoiceManagerConfig) {
     this.livekit = new LiveKitManager(config.livekit);
     this.deepgram = new DeepgramManager(config.deepgram);
+    
+    // Initialize ElevenLabs if config provided
+    if (config.elevenlabs) {
+      this.elevenlabs = new ElevenLabsManager(config.elevenlabs);
+    }
 
     // Forward transcripts from Deepgram
     this.deepgram.onTranscript((transcript) => {
@@ -113,5 +121,58 @@ export class VoiceManager {
    */
   async transcribeRecording(audioUrl: string): Promise<AudioTranscript> {
     return await this.deepgram.transcribeFile(audioUrl);
+  }
+
+  /**
+   * Convert text to speech (for interviewer questions)
+   */
+  async speakText(
+    text: string,
+    voiceId?: string,
+    options?: {
+      stability?: number;
+      similarityBoost?: number;
+    }
+  ): Promise<Buffer> {
+    if (!this.elevenlabs) {
+      throw new Error('ElevenLabs not configured');
+    }
+    return await this.elevenlabs.textToSpeech(text, voiceId, options);
+  }
+
+  /**
+   * List available voices
+   */
+  async listVoices() {
+    if (!this.elevenlabs) {
+      throw new Error('ElevenLabs not configured');
+    }
+    return await this.elevenlabs.listVoices();
+  }
+
+  /**
+   * Clone a voice from audio samples
+   */
+  async cloneVoice(name: string, audioFiles: string[] | Buffer[], description?: string) {
+    if (!this.elevenlabs) {
+      throw new Error('ElevenLabs not configured');
+    }
+    return await this.elevenlabs.cloneVoice(name, audioFiles, description);
+  }
+
+  /**
+   * Set default interviewer voice
+   */
+  setInterviewerVoice(voiceId: string): void {
+    if (this.elevenlabs) {
+      this.elevenlabs.setDefaultVoice(voiceId);
+    }
+  }
+
+  /**
+   * Get TTS manager (if available)
+   */
+  getTTSManager(): ElevenLabsManager | undefined {
+    return this.elevenlabs;
   }
 }

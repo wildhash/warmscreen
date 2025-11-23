@@ -105,4 +105,58 @@ export const questionRoutes: FastifyPluginAsync = async (server) => {
 
     return { message: 'Question correlations updated' };
   });
+
+  // Bulk upload questions
+  server.post('/bulk-upload', async (request, reply) => {
+    const { questions } = request.body as any;
+
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return reply.code(400).send({ error: 'Questions array is required' });
+    }
+
+    // Get a user to be the creator (in real app, from auth)
+    const user = await server.prisma.user.findFirst();
+    if (!user) {
+      return reply.code(400).send({ error: 'No users found' });
+    }
+
+    // Validate and create questions
+    const createdQuestions = [];
+    const errors = [];
+
+    for (let i = 0; i < questions.length; i++) {
+      try {
+        const data = CreateQuestionSchema.parse(questions[i]);
+        
+        const question = await server.prisma.question.create({
+          data: {
+            content: data.content,
+            category: data.category,
+            difficulty: data.difficulty,
+            position: data.position,
+            skillTags: data.skillTags,
+            generatedBy: data.generatedBy,
+            generationPrompt: data.generationPrompt,
+            createdById: user.id,
+          },
+        });
+
+        createdQuestions.push(question);
+      } catch (error: any) {
+        errors.push({ 
+          index: i, 
+          question: questions[i], 
+          error: error.message 
+        });
+      }
+    }
+
+    return {
+      success: true,
+      created: createdQuestions.length,
+      failed: errors.length,
+      questions: createdQuestions,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  });
 };

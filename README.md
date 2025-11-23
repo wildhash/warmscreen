@@ -11,12 +11,12 @@ WarmScreen is built as a monorepo with the following structure:
 
 ### Packages
 - **database** - Prisma schema and database client
-- **agents** - 7-agent swarm system with reflexion loops
+- **agents** - 7-agent swarm system with reflexion loops + Voice Interviewer Agent
 - **shared** - Shared types, schemas, and utilities
-- **voice** - LiveKit/Telnyx voice integration with Deepgram STT
+- **voice** - LiveKit/Deepgram voice integration + ElevenLabs TTS for voice cloning
 - **proctoring** - Webcam-based proctoring with TensorFlow face detection
 
-## 🧠 7-Agent Swarm System
+## 🧠 7-Agent Swarm System + Voice Interviewer
 
 The core of WarmScreen is a sophisticated multi-agent system:
 
@@ -27,6 +27,7 @@ The core of WarmScreen is a sophisticated multi-agent system:
 5. **Tagger Agent** - Tags responses with skills, behaviors, and competencies
 6. **Scorer Agent** - Calculates weighted scores using position-specific models
 7. **Narrator Agent** - Generates human-readable explanations and decision reasoning
+8. **Voice Interviewer Agent** - Conducts voice interviews using TTS with cloned voices
 
 Each agent supports **reflexion loops** - they can self-improve by iterating on their outputs when confidence is low.
 
@@ -40,9 +41,10 @@ Each agent supports **reflexion loops** - they can self-improve by iterating on 
 
 ### Voice Integration
 - **LiveKit**: Real-time voice communication
-- **Telnyx**: Alternative telephony provider
+- **ElevenLabs**: Text-to-speech with voice cloning for interviewer
 - **Deepgram**: State-of-the-art speech-to-text transcription
 - **WebSocket**: Real-time transcript streaming
+- **Voice Cloning**: Clone voices from company interviewers
 
 ### Proctoring
 - **Face Detection**: TensorFlow BlazeFace for candidate verification
@@ -104,6 +106,7 @@ cd packages/database
 cp .env.example .env
 npm run db:generate
 npm run db:push
+npm run db:seed  # Seed with sample questions
 ```
 
 5. Configure environment variables:
@@ -111,7 +114,7 @@ npm run db:push
 # API
 cd apps/api
 cp .env.example .env
-# Edit .env with your credentials
+# Edit .env with your credentials (add ELEVENLABS_API_KEY for voice)
 
 # Web
 cd ../web
@@ -127,6 +130,23 @@ npm run dev
 This will start:
 - Next.js web app on http://localhost:3000
 - Fastify API on http://localhost:3001
+
+### Quick Test - Voice Interviewer
+
+After setup, test the voice interviewer agent:
+
+```bash
+# Run the test suite
+node test-voice-interviewer.js
+```
+
+This tests:
+- ✅ Question management
+- ✅ Voice interviewer flow
+- ✅ TTS endpoints (if configured)
+- ✅ Bulk question upload
+
+**📖 For detailed voice interviewer setup, see [VOICE_INTERVIEWER_GUIDE.md](./VOICE_INTERVIEWER_GUIDE.md)**
 
 ### Using Daytona
 
@@ -297,11 +317,17 @@ npm start
 
 Required:
 - `DATABASE_URL` - PostgreSQL connection string
+
+Voice Services:
+- `ELEVENLABS_API_KEY` - ElevenLabs API key for TTS and voice cloning
+- `INTERVIEWER_VOICE_ID` - (Optional) Specific voice ID for interviewer
+- `LIVEKIT_URL` - LiveKit server URL (optional for real-time voice)
+- `LIVEKIT_API_KEY` - LiveKit API key (optional)
+- `LIVEKIT_API_SECRET` - LiveKit API secret (optional)
+- `DEEPGRAM_API_KEY` - Deepgram API key for STT (optional)
+
+Monitoring:
 - `SENTRY_DSN` - Sentry project DSN (optional)
-- `LIVEKIT_URL` - LiveKit server URL
-- `LIVEKIT_API_KEY` - LiveKit API key
-- `LIVEKIT_API_SECRET` - LiveKit API secret
-- `DEEPGRAM_API_KEY` - Deepgram API key
 
 ### Docker Deployment
 
