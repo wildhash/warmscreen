@@ -213,4 +213,96 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
       },
     };
   });
+
+  // Initialize LiveKit agent for an interview
+  server.post('/livekit-agent/initialize', async (request, reply) => {
+    const { interviewId, agentId, projectId } = request.body as any;
+
+    if (!interviewId || !agentId || !projectId) {
+      return reply.code(400).send({ 
+        error: 'Missing required fields: interviewId, agentId, projectId' 
+      });
+    }
+
+    // Check if LiveKit is configured
+    if (!server.config.LIVEKIT_URL || !server.config.LIVEKIT_API_KEY || !server.config.LIVEKIT_API_SECRET) {
+      return reply.code(503).send({ 
+        error: 'LiveKit is not configured. Please set LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET environment variables.' 
+      });
+    }
+
+    try {
+      // Verify interview exists
+      const interview = await server.prisma.interview.findUnique({
+        where: { id: interviewId },
+      });
+
+      if (!interview) {
+        return reply.code(404).send({ error: 'Interview not found' });
+      }
+
+      // Create a LiveKit room for the interview
+      const roomName = `interview-${interviewId}`;
+
+      // Log the agent initialization
+      await server.prisma.agentLog.create({
+        data: {
+          interviewId,
+          agentType: 'CONDUCTOR',
+          action: 'LIVEKIT_AGENT_INITIALIZE',
+          input: {
+            agentId,
+            projectId,
+            roomName,
+          },
+          output: {
+            status: 'initialized',
+            timestamp: new Date().toISOString(),
+          },
+          performanceScore: 1.0,
+          reflexionLoop: 0,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'LiveKit agent initialized successfully',
+        roomName,
+        agentId,
+        projectId,
+        interviewId,
+      };
+    } catch (error: any) {
+      console.error('Failed to initialize LiveKit agent:', error);
+      
+      // Log the error
+      try {
+        await server.prisma.agentLog.create({
+          data: {
+            interviewId,
+            agentType: 'CONDUCTOR',
+            action: 'LIVEKIT_AGENT_INITIALIZE_ERROR',
+            input: {
+              agentId,
+              projectId,
+              error: error.message,
+            },
+            output: {
+              error: error.message,
+              timestamp: new Date().toISOString(),
+            },
+            performanceScore: 0,
+            reflexionLoop: 0,
+          },
+        });
+      } catch (logError) {
+        console.error('Failed to log error:', logError);
+      }
+
+      return reply.code(500).send({ 
+        error: 'Failed to initialize LiveKit agent',
+        details: error.message,
+      });
+    }
+  });
 };
