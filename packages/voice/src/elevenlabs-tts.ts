@@ -1,5 +1,4 @@
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
-import { Readable } from 'stream';
 
 export interface ElevenLabsConfig {
   apiKey: string;
@@ -114,37 +113,32 @@ export class ElevenLabsManager {
 
   /**
    * Clone a voice from audio samples
+   * 
+   * @deprecated Voice cloning via API requires manual setup.
+   * Please use the ElevenLabs dashboard for voice cloning: https://elevenlabs.io/voice-lab
+   * 
+   * Voice cloning requires:
+   * - ElevenLabs Pro+ subscription
+   * - High-quality audio samples (1-3 minutes)
+   * - Manual voice profile creation via dashboard
+   * 
+   * After cloning via dashboard, use the returned Voice ID with other TTS methods.
+   * 
    * @param name - Name for the cloned voice
    * @param audioFiles - Array of audio file paths or buffers
    * @param description - Optional description
+   * @throws Error indicating manual setup required
    */
   async cloneVoice(
     name: string,
     audioFiles: string[] | Buffer[],
     description?: string
   ): Promise<{ voiceId: string; name: string }> {
-    // Note: Voice cloning requires Pro+ subscription
-    // This method requires specific API implementation based on ElevenLabs SDK version
-    throw new Error('Voice cloning requires ElevenLabs Pro+ subscription and manual setup. Please clone voices through the ElevenLabs dashboard and use the voice ID here.');
-    
-    // Example code (may need adjustment based on SDK version):
-    // const files = audioFiles.map((file, index) => {
-    //   if (Buffer.isBuffer(file)) {
-    //     return new File([file], `sample${index}.mp3`, { type: 'audio/mpeg' });
-    //   }
-    //   throw new Error('File path cloning not yet implemented. Please use buffers.');
-    // });
-    //
-    // const response = await this.client.voices.add({
-    //   name,
-    //   description,
-    //   files,
-    // });
-    //
-    // return {
-    //   voiceId: response.voice_id,
-    //   name: response.name,
-    // };
+    throw new Error(
+      'Voice cloning requires ElevenLabs Pro+ subscription and manual setup. ' +
+      'Please clone voices through the ElevenLabs dashboard (https://elevenlabs.io/voice-lab) ' +
+      'and use the voice ID with other TTS methods.'
+    );
   }
 
   /**
