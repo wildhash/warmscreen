@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User and Authentication
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      UserRole @default(RECRUITER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  interviews    Interview[]
+  questions     Question[]
+  scoringModels ScoringModel[]
+
+  @@index([email])
+}
+
+enum UserRole {
+  ADMIN
+  RECRUITER
+  CANDIDATE
+}
+
+// Interview Sessions
+model Interview {
+  id             String          @id @default(cuid())
+  candidateId    String
+  candidateName  String
+  candidateEmail String
+  position       String
+  status         InterviewStatus @default(SCHEDULED)
+  scheduledAt    DateTime
+  startedAt      DateTime?
+  completedAt    DateTime?
+  score          Float?
+  decision       Decision?
+  explainability Json? // JSON object with decision reasoning
+  recordingUrl   String?
+  transcriptUrl  String?
+  proctoringData Json? // Webcam snapshots, flags, etc.
+
+  recruiterId String
+  recruiter   User   @relation(fields: [recruiterId], references: [id])
+
+  responses     Response[]
+  feedbackLoops FeedbackLoop[]
+  agentLogs     AgentLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([candidateEmail])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Decision {
+  STRONG_HIRE
+  HIRE
+  NO_HIRE
+  STRONG_NO_HIRE
+}
+
+// Q's Database - Questions with learning
+model Question {
+  id         String     @id @default(cuid())
+  content    String     @db.Text
+  category   String
+  difficulty Difficulty
+  position   String
+  skillTags  String[]
+
+  // Learning metrics
+  avgScore         Float     @default(0)
+  timesAsked       Int       @default(0)
+  correlationScore Float     @default(0) // Correlation with successful hires
+  lastUsed         DateTime?
+
+  // Auto-generation metadata
+  generatedBy      String? // "agent" or user ID
+  generationPrompt String? @db.Text
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  responses     Response[]
+  feedbackLoops FeedbackLoop[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([position])
+  @@index([correlationScore])
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+  EXPERT
+}
+
+// Interview Responses
+model Response {
+  id          String    @id @default(cuid())
+  interviewId String
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  questionId  String
+  question    Question  @relation(fields: [questionId], references: [id])
+
+  audioUrl   String?
+  transcript String  @db.Text
+  duration   Int // seconds
+
+  // Agent Analysis
+  scores     Json // { technical: 8, communication: 7, ... }
+  tags       String[]
+  sentiment  Float? // -1 to 1
+  confidence Float? // 0 to 1
+
+  createdAt DateTime @default(now())
+
+  @@index([interviewId])
+  @@index([questionId])
+}
+
+// Real-time Feedback Loops
+model FeedbackLoop {
+  id          String    @id @default(cuid())
+  interviewId String
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  questionId  String?
+  question    Question? @relation(fields: [questionId], references: [id])
+
+  feedbackType FeedbackType
+  signal       Json // { pattern: "...", strength: 0.8, ... }
+  actionTaken  String?      @db.Text
+  outcome      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([interviewId])
+  @@index([feedbackType])
+}
+
+enum FeedbackType {
+  QUESTION_EFFECTIVENESS
+  SCORING_ACCURACY
+  AGENT_PERFORMANCE
+  PATTERN_DETECTED
+  SELF_HEALING
+}
+
+// Agent Logs for Reflexion
+model AgentLog {
+  id          String     @id @default(cuid())
+  interviewId String?
+  interview   Interview? @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  agentType        AgentType
+  action           String
+  input            Json
+  output           Json
+  reflexionLoop    Int       @default(0)
+  performanceScore Float?
+
+  createdAt DateTime @default(now())
+
+  @@index([agentType])
+  @@index([interviewId])
+}
+
+enum AgentType {
+  ANALYZER
+  VERIFIER
+  PLANNER
+  CONDUCTOR
+  TAGGER
+  SCORER
+  NARRATOR
+}
+
+// Scoring Models - Auto-refined per role
+model ScoringModel {
+  id       String @id @default(cuid())
+  position String
+  version  Int    @default(1)
+
+  weights    Json // { technical: 0.4, communication: 0.3, ... }
+  thresholds Json // { hire: 75, strong_hire: 85, ... }
+
+  accuracy   Float? // Measured against actual hiring decisions
+  sampleSize Int    @default(0)
+
+  isActive Boolean @default(false)
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([position, isActive])
+  @@index([accuracy])
+}
+
+// High-signal Pattern Repository
+model Pattern {
+  id          String @id @default(cuid())
+  name        String
+  description String @db.Text
+  category    String
+
+  signal      Json // Pattern definition
+  strength    Float // 0 to 1
+  occurrences Int   @default(1)
+
+  successRate Float? // Correlation with positive outcomes
+
+  isActive  Boolean @default(true)
+  amplified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category, isActive])
+  @@index([strength])
+}

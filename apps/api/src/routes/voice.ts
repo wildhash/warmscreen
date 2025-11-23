@@ -9,8 +9,8 @@ export const voiceRoutes: FastifyPluginAsync = async (server) => {
     voiceManager = new VoiceManager({
       livekit: {
         url: server.config.LIVEKIT_URL,
-        apiKey: server.config.LIVEKIT_API_KEY,
-        apiSecret: server.config.LIVEKIT_API_SECRET,
+        apiKey: server.config.LIVEKIT_API_KEY || '',
+        apiSecret: server.config.LIVEKIT_API_SECRET || '',
       },
       deepgram: {
         apiKey: server.config.DEEPGRAM_API_KEY,

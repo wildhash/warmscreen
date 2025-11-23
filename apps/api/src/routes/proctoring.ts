@@ -58,19 +58,19 @@ export const proctoringRoutes: FastifyPluginAsync = async (server) => {
   });
 
   // Save proctoring data to interview
-  server.post('/:interviewId/save', async (request, reply) => {
-    const { interviewId } = request.params as { id: string };
+  server.post('/:id/save', async (request, reply) => {
+    const { id } = request.params as { id: string };
     
     const summary = proctoringManager.getSummary();
     const snapshots = proctoringManager.getSnapshots();
 
     await server.prisma.interview.update({
-      where: { id: interviewId },
+      where: { id },
       data: {
         proctoringData: {
           summary,
-          snapshots: snapshots.slice(-10), // Save last 10 snapshots
-        },
+          snapshots: snapshots.slice(-10),
+        } as any,
       },
     });
 

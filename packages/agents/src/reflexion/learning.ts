@@ -46,7 +46,7 @@ export class ReflexionSystem {
         feedbackType: 'QUESTION_EFFECTIVENESS',
         signal: {
           outcome: interview.decision,
-          questionsUsed: interview.responses.map(r => r.questionId),
+          questionsUsed: interview.responses.map((r: any) => r.questionId),
         },
         actionTaken: 'Updated question correlation scores',
       },
@@ -111,13 +111,13 @@ export class ReflexionSystem {
     const communicationScores: number[] = [];
     const problemSolvingScores: number[] = [];
 
-    interviews.forEach(interview => {
+    interviews.forEach((interview: any) => {
       const isHire = ['HIRE', 'STRONG_HIRE'].includes(interview.decision!);
       outcomes.push(isHire ? 1 : 0);
 
       // Aggregate scores
       let techSum = 0, commSum = 0, psSum = 0, count = 0;
-      interview.responses.forEach(response => {
+      interview.responses.forEach((response: any) => {
         const scores = response.scores as any;
         if (scores) {
           techSum += scores.technical || 5;
@@ -209,7 +209,7 @@ export class ReflexionSystem {
 
     // Identify gaps (categories/skills with few questions)
     const categoryCount = new Map<string, number>();
-    questions.forEach(q => {
+    questions.forEach((q: any) => {
       categoryCount.set(q.category, (categoryCount.get(q.category) || 0) + 1);
     });
 
@@ -254,19 +254,19 @@ export class ReflexionSystem {
     // Track question outcomes
     const questionOutcomes = new Map<string, { scores: number[]; outcomes: number[] }>();
 
-    interviews.forEach(interview => {
+    interviews.forEach((interview: any) => {
       const isHire = ['HIRE', 'STRONG_HIRE'].includes(interview.decision!);
       const outcome = isHire ? 1 : 0;
 
-      interview.responses.forEach(response => {
+      interview.responses.forEach((response: any) => {
         if (!questionOutcomes.has(response.questionId)) {
           questionOutcomes.set(response.questionId, { scores: [], outcomes: [] });
         }
 
         const data = questionOutcomes.get(response.questionId)!;
-        const scores = response.scores as any;
+        const scores = response.scores as Record<string, number>;
         if (scores) {
-          const avgScore = Object.values(scores).reduce((a: any, b: any) => a + b, 0) / 
+          const avgScore = Object.values(scores).reduce((a, b) => a + b, 0) / 
                           Object.values(scores).length;
           data.scores.push(avgScore);
           data.outcomes.push(outcome);

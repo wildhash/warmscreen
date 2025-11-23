@@ -10,9 +10,6 @@
   },
   "dependencies": {
     "@warmscreen/shared": "*",
-    "@tensorflow/tfjs-node": "^4.15.0",
-    "@tensorflow-models/blazeface": "^0.0.7",
-    "canvas": "^2.11.2",
     "sharp": "^0.33.1"
   },
   "devDependencies": {

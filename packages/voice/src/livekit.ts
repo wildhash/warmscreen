@@ -123,7 +123,7 @@ export class LiveKitManager {
 
     return {
       name: this.room.name,
-      participants: Array.from(this.room.remoteParticipants.values()).map(p => ({
+      participants: Array.from(this.room.participants.values()).map((p: any) => ({
         identity: p.identity,
         name: p.name,
         isSpeaking: p.isSpeaking,

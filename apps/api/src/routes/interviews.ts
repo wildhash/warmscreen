@@ -204,7 +204,7 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
         score: interview.score,
         explainability: interview.explainability,
         conductedAt: interview.completedAt,
-        responses: interview.responses.map(r => ({
+        responses: interview.responses.map((r: any) => ({
           question: r.question.content,
           transcript: r.transcript,
           scores: r.scores,

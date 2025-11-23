@@ -1,2 +1,2 @@
-export * from './generated/client';
-export { PrismaClient } from './generated/client';
+export * from '../prisma/generated/client';
+export { PrismaClient } from '../prisma/generated/client';

@@ -223,7 +223,7 @@ export class ConductorAgent {
       orderBy: { createdAt: 'asc' },
     });
 
-    return logs.map(log => ({
+    return logs.map((log: any) => ({
       type: log.agentType as AgentType,
       result: log.output,
       confidence: log.performanceScore || 0.5,
