@@ -1,0 +1,23 @@
+{
+  "name": "@warmscreen/voice",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint src/",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@warmscreen/shared": "*",
+    "livekit-client": "^1.15.0",
+    "livekit-server-sdk": "^1.2.7",
+    "@deepgram/sdk": "^3.1.0",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.3"
+  }
+}
