@@ -24,6 +24,9 @@ const envSchema = {
     DEEPGRAM_API_KEY: { type: 'string' },
     ELEVENLABS_API_KEY: { type: 'string' },
     INTERVIEWER_VOICE_ID: { type: 'string' },
+    LIVEKIT_AGENT_ID: { type: 'string' },
+    LIVEKIT_PROJECT_ID: { type: 'string' },
+    DEFAULT_RECRUITER_ID: { type: 'string', default: 'default-recruiter' },
   },
 };
 

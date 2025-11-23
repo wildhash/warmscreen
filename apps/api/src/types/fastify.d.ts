@@ -14,6 +14,9 @@ declare module 'fastify' {
       DEEPGRAM_API_KEY?: string;
       ELEVENLABS_API_KEY?: string;
       INTERVIEWER_VOICE_ID?: string;
+      LIVEKIT_AGENT_ID?: string;
+      LIVEKIT_PROJECT_ID?: string;
+      DEFAULT_RECRUITER_ID: string;
     };
   }
 }
