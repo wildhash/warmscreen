@@ -10,6 +10,7 @@ export default function InterviewsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [defaultRecruiterId, setDefaultRecruiterId] = useState('default-recruiter');
   const [formData, setFormData] = useState({
     candidateName: '',
     candidateEmail: '',
@@ -32,6 +33,15 @@ export default function InterviewsPage() {
 
   useEffect(() => {
     fetchInterviews();
+    
+    // Fetch default recruiter ID
+    fetcher('/api/interviews/config/default-recruiter')
+      .then((data) => {
+        setDefaultRecruiterId(data.recruiterId);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch default recruiter ID:', err);
+      });
   }, []);
 
   const handleCreateInterview = async (e: React.FormEvent) => {
@@ -40,10 +50,10 @@ export default function InterviewsPage() {
     setCreateError('');
 
     try {
-      // Create interview with default recruiter ID
+      // Create interview with configured recruiter ID
       const interviewData = {
         ...formData,
-        recruiterId: 'default-recruiter',
+        recruiterId: defaultRecruiterId,
       };
 
       const result = await apiPost('/api/interviews', interviewData);
@@ -52,13 +62,12 @@ export default function InterviewsPage() {
       try {
         await apiPost('/api/interviews/livekit-agent/initialize', {
           interviewId: result.interview.id,
-          agentId: 'ab_15cy5pu678o',
-          projectId: 'p_ds8e1g76bj2',
         });
       } catch (agentError: any) {
         console.error('Failed to initialize LiveKit agent:', agentError);
+        const errorDetails = agentError.details || agentError.message || 'Unknown error';
         // Don't fail the entire operation if agent initialization fails
-        setCreateError('Interview created but LiveKit agent initialization failed. You can retry later.');
+        setCreateError(`Interview created successfully, but LiveKit agent initialization failed: ${errorDetails}. You can retry initialization later.`);
       }
 
       // Reset form and close modal
@@ -74,7 +83,8 @@ export default function InterviewsPage() {
       fetchInterviews();
     } catch (error: any) {
       console.error('Failed to create interview:', error);
-      setCreateError(error.message || 'Failed to create interview. Please try again.');
+      const errorMessage = error.details || error.message || 'An unexpected error occurred';
+      setCreateError(`Failed to create interview: ${errorMessage}. Please check your input and try again.`);
     } finally {
       setCreating(false);
     }

@@ -18,7 +18,10 @@ export async function apiPost(url: string, data: any) {
   });
   
   if (!res.ok) {
-    throw new Error('API request failed');
+    const errorData = await res.json().catch(() => ({ error: 'Request failed' }));
+    const error: any = new Error(errorData.error || 'API request failed');
+    error.details = errorData.details;
+    throw error;
   }
   
   return res.json();

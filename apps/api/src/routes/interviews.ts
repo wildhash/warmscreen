@@ -7,6 +7,19 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
   const conductor = new ConductorAgent(server.prisma);
   const reflexion = new ReflexionSystem(server.prisma);
 
+  // Validate LiveKit agent configuration at startup
+  const isLiveKitAgentConfigured = Boolean(
+    server.config.LIVEKIT_URL && 
+    server.config.LIVEKIT_API_KEY && 
+    server.config.LIVEKIT_API_SECRET &&
+    server.config.LIVEKIT_AGENT_ID &&
+    server.config.LIVEKIT_PROJECT_ID
+  );
+
+  if (!isLiveKitAgentConfigured) {
+    server.log.warn('LiveKit agent not fully configured. Agent initialization endpoint will not be available.');
+  }
+
   // List interviews
   server.get('/', async (request, reply) => {
     const interviews = await server.prisma.interview.findMany({
@@ -216,20 +229,25 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
 
   // Initialize LiveKit agent for an interview
   server.post('/livekit-agent/initialize', async (request, reply) => {
-    const { interviewId, agentId, projectId } = request.body as any;
-
-    if (!interviewId || !agentId || !projectId) {
-      return reply.code(400).send({ 
-        error: 'Missing required fields: interviewId, agentId, projectId' 
-      });
-    }
-
-    // Check if LiveKit is configured
-    if (!server.config.LIVEKIT_URL || !server.config.LIVEKIT_API_KEY || !server.config.LIVEKIT_API_SECRET) {
+    // Check if LiveKit agent is configured
+    if (!isLiveKitAgentConfigured) {
       return reply.code(503).send({ 
-        error: 'LiveKit is not configured. Please set LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET environment variables.' 
+        error: 'LiveKit agent is not configured',
+        details: 'Please set LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_AGENT_ID, and LIVEKIT_PROJECT_ID environment variables.',
       });
     }
+
+    const { interviewId } = request.body as any;
+
+    if (!interviewId) {
+      return reply.code(400).send({ 
+        error: 'Missing required field: interviewId',
+      });
+    }
+
+    // Use configured agent and project IDs from environment
+    const agentId = server.config.LIVEKIT_AGENT_ID;
+    const projectId = server.config.LIVEKIT_PROJECT_ID;
 
     try {
       // Verify interview exists
@@ -238,7 +256,10 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
       });
 
       if (!interview) {
-        return reply.code(404).send({ error: 'Interview not found' });
+        return reply.code(404).send({ 
+          error: 'Interview not found',
+          details: `No interview found with ID: ${interviewId}`,
+        });
       }
 
       // Create a LiveKit room for the interview
@@ -304,5 +325,21 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
         details: error.message,
       });
     }
+  });
+
+  // Get LiveKit agent configuration status
+  server.get('/livekit-agent/config', async (request, reply) => {
+    return {
+      configured: isLiveKitAgentConfigured,
+      agentId: isLiveKitAgentConfigured ? server.config.LIVEKIT_AGENT_ID : null,
+      projectId: isLiveKitAgentConfigured ? server.config.LIVEKIT_PROJECT_ID : null,
+    };
+  });
+
+  // Get default recruiter ID
+  server.get('/config/default-recruiter', async (request, reply) => {
+    return {
+      recruiterId: server.config.DEFAULT_RECRUITER_ID,
+    };
   });
 };

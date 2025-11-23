@@ -39,11 +39,11 @@ This document describes the integration of the LiveKit Cloud agent (Agent ID: `a
 **Request Body:**
 ```json
 {
-  "interviewId": "clxyz123...",
-  "agentId": "ab_15cy5pu678o",
-  "projectId": "p_ds8e1g76bj2"
+  "interviewId": "clxyz123..."
 }
 ```
+
+**Note:** The `agentId` and `projectId` are now automatically loaded from environment variables (`LIVEKIT_AGENT_ID` and `LIVEKIT_PROJECT_ID`) instead of being passed in the request.
 
 **Success Response (200):**
 ```json
@@ -59,10 +59,10 @@ This document describes the integration of the LiveKit Cloud agent (Agent ID: `a
 
 **Error Responses:**
 
-- **400 Bad Request:** Missing required fields
+- **400 Bad Request:** Missing required field
 ```json
 {
-  "error": "Missing required fields: interviewId, agentId, projectId"
+  "error": "Missing required field: interviewId"
 }
 ```
 
@@ -93,26 +93,39 @@ This document describes the integration of the LiveKit Cloud agent (Agent ID: `a
 The following environment variables must be set in `apps/api/.env` for the LiveKit agent to function:
 
 ```env
-# LiveKit Configuration
+# LiveKit Configuration (Required for agent functionality)
 LIVEKIT_URL=wss://your-livekit-instance.com
 LIVEKIT_API_KEY=your_api_key
 LIVEKIT_API_SECRET=your_api_secret
+
+# LiveKit Agent Configuration (Required)
+# These values are from the LiveKit Cloud agent builder
+LIVEKIT_AGENT_ID=ab_15cy5pu678o
+LIVEKIT_PROJECT_ID=p_ds8e1g76bj2
+
+# Default recruiter ID for interviews (Optional, defaults to 'default-recruiter')
+DEFAULT_RECRUITER_ID=default-recruiter
 ```
+
+**Note:** The agent ID and project ID are now configured via environment variables instead of being hardcoded. This improves security and allows for easy configuration across different environments (dev, staging, prod).
 
 ## Error Handling
 
 ### Frontend Error Handling
 
-1. **Network Errors:** Displays "Failed to create interview. Please try again."
-2. **Agent Initialization Errors:** Displays "Interview created but LiveKit agent initialization failed. You can retry later."
+1. **Network Errors:** Displays "Failed to create interview: [error details]. Please check your input and try again."
+2. **Agent Initialization Errors:** Displays "Interview created successfully, but LiveKit agent initialization failed: [error details]. You can retry initialization later."
 3. **Validation Errors:** HTML5 form validation for required fields
+4. **Detailed Error Messages:** Error responses from the API are parsed and displayed to users with actionable information
 
 ### Backend Error Handling
 
-1. **Configuration Check:** Validates LiveKit credentials before attempting initialization
-2. **Interview Validation:** Verifies interview exists before initializing agent
-3. **Error Logging:** All initialization attempts (success and failure) are logged to `AgentLog` table
-4. **Graceful Degradation:** If agent initialization fails, the interview is still created (non-blocking)
+1. **Configuration Check at Startup:** Validates LiveKit credentials and agent configuration when the server starts (fail-fast approach)
+2. **Request Validation:** Validates required fields before processing
+3. **Interview Validation:** Verifies interview exists with detailed error messages
+4. **Error Logging:** All initialization attempts (success and failure) are logged to `AgentLog` table
+5. **Graceful Degradation:** If agent initialization fails, the interview is still created (non-blocking)
+6. **Detailed Error Responses:** API returns specific error messages with details for troubleshooting
 
 ## Agent Logging
 
@@ -144,17 +157,20 @@ const handleCreateInterview = async () => {
     candidateEmail: 'jane@example.com',
     position: 'Senior Software Engineer',
     scheduledAt: '2024-01-15T10:00:00Z',
-    recruiterId: 'default-recruiter',
   };
 
-  // Create interview
-  const result = await apiPost('/api/interviews', interviewData);
+  // Fetch default recruiter ID (automatically loaded from config)
+  const configData = await fetcher('/api/interviews/config/default-recruiter');
   
-  // Initialize LiveKit agent
+  // Create interview
+  const result = await apiPost('/api/interviews', {
+    ...interviewData,
+    recruiterId: configData.recruiterId,
+  });
+  
+  // Initialize LiveKit agent (agent ID and project ID are from env vars)
   await apiPost('/api/interviews/livekit-agent/initialize', {
     interviewId: result.interview.id,
-    agentId: 'ab_15cy5pu678o',
-    projectId: 'p_ds8e1g76bj2',
   });
 };
 ```
@@ -163,13 +179,25 @@ const handleCreateInterview = async () => {
 
 ```typescript
 // API example (Fastify)
+// Configuration is validated at startup
+const isLiveKitAgentConfigured = Boolean(
+  server.config.LIVEKIT_URL && 
+  server.config.LIVEKIT_API_KEY && 
+  server.config.LIVEKIT_API_SECRET &&
+  server.config.LIVEKIT_AGENT_ID &&
+  server.config.LIVEKIT_PROJECT_ID
+);
+
 server.post('/interviews/livekit-agent/initialize', async (request, reply) => {
-  const { interviewId, agentId, projectId } = request.body;
-  
-  // Validate configuration
-  if (!server.config.LIVEKIT_URL) {
-    return reply.code(503).send({ error: 'LiveKit not configured' });
+  if (!isLiveKitAgentConfigured) {
+    return reply.code(503).send({ error: 'LiveKit agent not configured' });
   }
+  
+  const { interviewId } = request.body;
+  
+  // Agent and project IDs are loaded from environment
+  const agentId = server.config.LIVEKIT_AGENT_ID;
+  const projectId = server.config.LIVEKIT_PROJECT_ID;
   
   // Create room and log
   const roomName = `interview-${interviewId}`;
@@ -183,7 +211,7 @@ server.post('/interviews/livekit-agent/initialize', async (request, reply) => {
     },
   });
   
-  return { success: true, roomName };
+  return { success: true, roomName, agentId, projectId };
 });
 ```
 
@@ -220,9 +248,16 @@ LIMIT 10;
 
 ## Troubleshooting
 
-### "LiveKit is not configured" Error
+### "LiveKit agent is not configured" Error
 
-**Solution:** Ensure `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are set in `apps/api/.env`
+**Solution:** Ensure all LiveKit environment variables are set in `apps/api/.env`:
+- `LIVEKIT_URL`
+- `LIVEKIT_API_KEY`
+- `LIVEKIT_API_SECRET`
+- `LIVEKIT_AGENT_ID` (set to `ab_15cy5pu678o`)
+- `LIVEKIT_PROJECT_ID` (set to `p_ds8e1g76bj2`)
+
+Check the server logs on startup - there should be a warning if configuration is incomplete.
 
 ### Agent Initialization Fails Silently
 
