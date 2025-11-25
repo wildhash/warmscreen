@@ -1,7 +1,28 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const getBaseUrl = () => {
+  const isBrowser = typeof window !== 'undefined';
+  if (isBrowser) {
+    return process.env.NEXT_PUBLIC_API_URL || '';
+  }
+  return (
+    process.env.INTERNAL_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:3001'
+  );
+};
+
+const resolveUrl = (url: string) => {
+  if (url.startsWith('http')) {
+    return url;
+  }
+  const base = getBaseUrl();
+  return base ? `${base}${url}` : url;
+};
 
 export async function fetcher(url: string) {
-  const res = await fetch(`${API_URL}${url}`);
+  const fullUrl = resolveUrl(url);
+  const res = await fetch(fullUrl, {
+    cache: 'no-store',
+  });
   if (!res.ok) {
     throw new Error('API request failed');
   }
@@ -9,12 +30,14 @@ export async function fetcher(url: string) {
 }
 
 export async function apiPost(url: string, data: any) {
-  const res = await fetch(`${API_URL}${url}`, {
+  const fullUrl = resolveUrl(url);
+  const res = await fetch(fullUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(data),
+    cache: 'no-store',
   });
   
   if (!res.ok) {
@@ -28,12 +51,14 @@ export async function apiPost(url: string, data: any) {
 }
 
 export async function apiPatch(url: string, data: any) {
-  const res = await fetch(`${API_URL}${url}`, {
+  const fullUrl = resolveUrl(url);
+  const res = await fetch(fullUrl, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(data),
+    cache: 'no-store',
   });
   
   if (!res.ok) {

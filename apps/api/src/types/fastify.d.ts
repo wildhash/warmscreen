@@ -17,6 +17,8 @@ declare module 'fastify' {
       LIVEKIT_AGENT_ID?: string;
       LIVEKIT_PROJECT_ID?: string;
       DEFAULT_RECRUITER_ID: string;
+      AGI_API_KEY?: string;
+      AGI_API_BASE_URL: string;
     };
   }
 }

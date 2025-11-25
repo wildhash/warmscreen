@@ -1,10 +1,11 @@
 import { FastifyPluginAsync } from 'fastify';
-import { VoiceManager } from '@warmscreen/voice';
+import { VoiceManager, AGIVoiceClient } from '@warmscreen/voice';
 import { VoiceInterviewerAgent } from '@warmscreen/agents';
 
 export const voiceRoutes: FastifyPluginAsync = async (server) => {
   let voiceManager: VoiceManager | null = null;
   let interviewerAgent: VoiceInterviewerAgent | null = null;
+  let agiClient: AGIVoiceClient | null = null;
 
   // Initialize voice manager if credentials available
   if (server.config.LIVEKIT_URL && server.config.DEEPGRAM_API_KEY) {
@@ -29,6 +30,14 @@ export const voiceRoutes: FastifyPluginAsync = async (server) => {
         voiceId: server.config.INTERVIEWER_VOICE_ID,
       });
     }
+  }
+
+  // Initialize AGI client for voice cloning if credentials available
+  if (server.config.AGI_API_KEY) {
+    agiClient = new AGIVoiceClient({
+      apiKey: server.config.AGI_API_KEY,
+      baseUrl: server.config.AGI_API_BASE_URL,
+    });
   }
 
   // Start voice session
@@ -86,6 +95,30 @@ export const voiceRoutes: FastifyPluginAsync = async (server) => {
     return { transcript };
   });
 
+  // Clone voice using AGI API
+  server.post('/clone', async (request, reply) => {
+    if (!agiClient) {
+      return reply.code(503).send({ error: 'Voice cloning not configured. Set AGI_API_KEY.' });
+    }
+
+    const { voiceName, sampleUrl, description } = request.body as any;
+
+    if (!voiceName || !sampleUrl) {
+      return reply.code(400).send({ error: 'voiceName and sampleUrl are required' });
+    }
+
+    try {
+      const result = await agiClient.cloneVoice({
+        voiceName,
+        sampleUrl,
+        description,
+      });
+      return { clone: result };
+    } catch (error: any) {
+      return reply.code(500).send({ error: error.message });
+    }
+  });
+
   // WebSocket for real-time transcription
   server.get('/ws', { websocket: true }, (connection, req) => {
     if (!voiceManager) {
@@ -141,7 +174,7 @@ export const voiceRoutes: FastifyPluginAsync = async (server) => {
     }
   });
 
-  // Clone a voice
+  // Clone a voice using ElevenLabs (file upload)
   server.post('/tts/clone', async (request, reply) => {
     if (!voiceManager) {
       return reply.code(503).send({ error: 'Voice service not configured' });
@@ -169,9 +202,7 @@ export const voiceRoutes: FastifyPluginAsync = async (server) => {
     }
 
     try {
-      // Convert uploaded file to buffer
       const buffer = await data.toBuffer();
-      
       const result = await voiceManager.cloneVoice(name, [buffer], description);
       return { 
         success: true, 
@@ -186,7 +217,7 @@ export const voiceRoutes: FastifyPluginAsync = async (server) => {
   // Interview: Start interview with greeting
   server.post('/interview/start', async (request, reply) => {
     if (!interviewerAgent) {
-      return reply.code(503).send({ error: 'Interviewer agent not configured' });
+      return reply.code(503).send({ error: 'Interviewer agent not configured. Set ELEVENLABS_API_KEY.' });
     }
 
     const { candidateName } = request.body as any;

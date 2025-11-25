@@ -94,6 +94,44 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
     return { interview };
   });
 
+  // Start interview
+  server.post('/:id/start', async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const interview = await server.prisma.interview.findUnique({
+      where: { id },
+    });
+
+    if (!interview) {
+      return reply.code(404).send({ error: 'Interview not found' });
+    }
+
+    if (interview.status !== 'SCHEDULED') {
+      return reply.code(400).send({ error: 'Interview already started or completed' });
+    }
+
+    // Update status to IN_PROGRESS
+    const updated = await server.prisma.interview.update({
+      where: { id },
+      data: {
+        status: 'IN_PROGRESS',
+        startedAt: new Date(),
+      },
+    });
+
+    // Get questions for this position
+    const questions = await server.prisma.question.findMany({
+      where: { position: interview.position },
+      take: 5,
+      orderBy: [
+        { correlationScore: 'desc' },
+        { avgScore: 'desc' },
+      ],
+    });
+
+    return { interview: updated, questions };
+  });
+
   // Submit response
   server.post('/:id/responses', async (request, reply) => {
     const { id } = request.params as { id: string };

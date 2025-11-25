@@ -104,11 +104,11 @@ export default function InterviewsPage() {
               onClick={() => setShowCreateModal(true)}
               className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition"
             >
-              Create Interview
+              + Create Interview
             </button>
             <Link
               href="/"
-              className="text-indigo-600 hover:text-indigo-800"
+              className="text-indigo-600 hover:text-indigo-800 flex items-center"
             >
               ← Back to Home
             </Link>

@@ -1,22 +1,25 @@
 import { LiveKitManager, LiveKitConfig } from './livekit';
 import { DeepgramManager, DeepgramConfig } from './deepgram';
 import { ElevenLabsManager, ElevenLabsConfig } from './elevenlabs-tts';
+import { AGIVoiceClient, AGIVoiceConfig, VoiceCloneOptions, VoiceCloneResponse } from './agi';
 import { AudioTranscript } from '@warmscreen/shared';
 
 export interface VoiceManagerConfig {
   livekit: LiveKitConfig;
   deepgram: DeepgramConfig;
   elevenlabs?: ElevenLabsConfig;
+  agi?: AGIVoiceConfig;
 }
 
 /**
  * VoiceManager
- * Integrates LiveKit for voice communication, Deepgram for STT, and ElevenLabs for TTS
+ * Integrates LiveKit for voice communication, Deepgram for STT, ElevenLabs for TTS, and AGI for voice cloning
  */
 export class VoiceManager {
   private livekit: LiveKitManager;
   private deepgram: DeepgramManager;
   private elevenlabs?: ElevenLabsManager;
+  private agiClient?: AGIVoiceClient;
   private transcripts: AudioTranscript[] = [];
   private onTranscriptCallback?: (transcript: AudioTranscript) => void;
 
@@ -27,6 +30,11 @@ export class VoiceManager {
     // Initialize ElevenLabs if config provided
     if (config.elevenlabs) {
       this.elevenlabs = new ElevenLabsManager(config.elevenlabs);
+    }
+
+    // Initialize AGI client for voice cloning if config provided
+    if (config.agi?.apiKey) {
+      this.agiClient = new AGIVoiceClient(config.agi);
     }
 
     // Forward transcripts from Deepgram
@@ -135,7 +143,7 @@ export class VoiceManager {
     }
   ): Promise<Buffer> {
     if (!this.elevenlabs) {
-      throw new Error('ElevenLabs not configured');
+      throw new Error('ElevenLabs not configured. Set ELEVENLABS_API_KEY.');
     }
     return await this.elevenlabs.textToSpeech(text, voiceId, options);
   }
@@ -145,19 +153,29 @@ export class VoiceManager {
    */
   async listVoices() {
     if (!this.elevenlabs) {
-      throw new Error('ElevenLabs not configured');
+      throw new Error('ElevenLabs not configured. Set ELEVENLABS_API_KEY.');
     }
     return await this.elevenlabs.listVoices();
   }
 
   /**
-   * Clone a voice from audio samples
+   * Clone a voice from audio samples (using ElevenLabs)
    */
   async cloneVoice(name: string, audioFiles: string[] | Buffer[], description?: string) {
     if (!this.elevenlabs) {
-      throw new Error('ElevenLabs not configured');
+      throw new Error('ElevenLabs not configured. Set ELEVENLABS_API_KEY.');
     }
     return await this.elevenlabs.cloneVoice(name, audioFiles, description);
+  }
+
+  /**
+   * Clone a voice using AGI API (alternative method)
+   */
+  async cloneVoiceWithAGI(options: VoiceCloneOptions): Promise<VoiceCloneResponse> {
+    if (!this.agiClient) {
+      throw new Error('AGI voice cloning is not configured. Set AGI_API_KEY.');
+    }
+    return this.agiClient.cloneVoice(options);
   }
 
   /**
@@ -174,5 +192,12 @@ export class VoiceManager {
    */
   getTTSManager(): ElevenLabsManager | undefined {
     return this.elevenlabs;
+  }
+
+  /**
+   * Get AGI client (if available)
+   */
+  getAGIClient(): AGIVoiceClient | undefined {
+    return this.agiClient;
   }
 }

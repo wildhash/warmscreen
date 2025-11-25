@@ -27,6 +27,8 @@ const envSchema = {
     LIVEKIT_AGENT_ID: { type: 'string' },
     LIVEKIT_PROJECT_ID: { type: 'string' },
     DEFAULT_RECRUITER_ID: { type: 'string', default: 'default-recruiter' },
+    AGI_API_KEY: { type: 'string' },
+    AGI_API_BASE_URL: { type: 'string', default: 'https://api.agi.run/v1' },
   },
 };
 
@@ -116,8 +118,13 @@ async function start() {
     
     await server.listen({ port, host: '0.0.0.0' });
     console.log(`🚀 API server running on http://localhost:${port}`);
-  } catch (err) {
-    console.error('Error starting server:', err);
+  } catch (err: any) {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${err.port} is already in use. Please free up the port and try again.`);
+      console.error(`   Run: fuser -k ${err.port}/tcp`);
+    } else {
+      console.error('Error starting server:', err);
+    }
     process.exit(1);
   }
 }
