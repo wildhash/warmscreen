@@ -50,9 +50,17 @@ export default function InterviewsPage() {
     setCreateError('');
 
     try {
+      // Convert local datetime to ISO format
+      const scheduledAtISO = formData.scheduledAt 
+        ? new Date(formData.scheduledAt).toISOString()
+        : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // Default to tomorrow
+
       // Create interview with configured recruiter ID
       const interviewData = {
-        ...formData,
+        candidateName: formData.candidateName,
+        candidateEmail: formData.candidateEmail,
+        position: formData.position,
+        scheduledAt: scheduledAtISO,
         recruiterId: defaultRecruiterId,
       };
 
