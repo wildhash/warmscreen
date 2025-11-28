@@ -64,9 +64,13 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
 
     // Ensure recruiter exists, create default if needed
     let recruiterId = data.recruiterId;
-    const recruiter = await server.prisma.user.findUnique({
-      where: { id: recruiterId },
-    });
+    let recruiter = null;
+    
+    if (recruiterId) {
+      recruiter = await server.prisma.user.findUnique({
+        where: { id: recruiterId },
+      });
+    }
 
     if (!recruiter) {
       // Try to find any existing recruiter
