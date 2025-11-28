@@ -42,6 +42,7 @@ yarn-error.log*
 # Prisma
 *.db
 *.db-journal
+packages/database/prisma/generated/
 
 # Sentry
 .sentryclirc
