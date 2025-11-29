@@ -9,6 +9,7 @@ import { agentRoutes } from '../routes/agents';
 import { voiceRoutes } from '../routes/voice';
 import { proctoringRoutes } from '../routes/proctoring';
 import { initCache } from '../lib/cache';
+import { API_INFO } from '../lib/api-info';
 
 // Extend Fastify types to include our decorations
 declare module 'fastify' {
@@ -212,6 +213,11 @@ export async function buildTestServer(): Promise<FastifyInstance> {
   });
 
   await server.register(websocket);
+
+  // Root route
+  server.get('/', async () => {
+    return API_INFO;
+  });
 
   // Health check
   server.get('/health', async () => {
