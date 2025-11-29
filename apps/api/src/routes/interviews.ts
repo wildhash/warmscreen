@@ -62,33 +62,42 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
   server.post('/', async (request, reply) => {
     const data = CreateInterviewSchema.parse(request.body);
 
-    // Ensure recruiter exists, create default if needed
-    let recruiterId = data.recruiterId;
-    const recruiter = await server.prisma.user.findUnique({
-      where: { id: recruiterId },
-    });
+    // Resolve the recruiter ID to use for this interview
+    const resolveRecruiterId = async (): Promise<string> => {
+      // If a specific recruiterId was provided, verify it exists
+      if (data.recruiterId) {
+        const recruiter = await server.prisma.user.findUnique({
+          where: { id: data.recruiterId },
+        });
+        if (recruiter) {
+          return data.recruiterId;
+        }
+      }
 
-    if (!recruiter) {
       // Try to find any existing recruiter
       const existingRecruiter = await server.prisma.user.findFirst({
         where: { role: 'RECRUITER' },
       });
 
       if (existingRecruiter) {
-        recruiterId = existingRecruiter.id;
-      } else {
-        // Create a default recruiter
-        const newRecruiter = await server.prisma.user.create({
-          data: {
-            id: 'default-recruiter',
-            email: 'recruiter@warmscreen.com',
-            name: 'Default Recruiter',
-            role: 'RECRUITER',
-          },
-        });
-        recruiterId = newRecruiter.id;
+        return existingRecruiter.id;
       }
-    }
+
+      // Create or retrieve the default recruiter
+      const newRecruiter = await server.prisma.user.upsert({
+        where: { id: 'default-recruiter' },
+        update: {},
+        create: {
+          id: 'default-recruiter',
+          email: 'recruiter@warmscreen.com',
+          name: 'Default Recruiter',
+          role: 'RECRUITER',
+        },
+      });
+      return newRecruiter.id;
+    };
+
+    const recruiterId = await resolveRecruiterId();
 
     const interview = await server.prisma.interview.create({
       data: {
@@ -97,7 +106,7 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
         candidateId: `candidate-${Date.now()}`,
         position: data.position,
         scheduledAt: new Date(data.scheduledAt),
-        recruiterId: recruiterId,
+        recruiterId,
         status: 'SCHEDULED',
       },
     });

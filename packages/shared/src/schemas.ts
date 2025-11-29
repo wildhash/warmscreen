@@ -23,7 +23,7 @@ export const CreateInterviewSchema = z.object({
   candidateEmail: z.string().email(),
   position: z.string().min(1),
   scheduledAt: z.string().datetime(),
-  recruiterId: z.string(),
+  recruiterId: z.string().optional(),
 });
 
 export const UpdateInterviewSchema = z.object({
