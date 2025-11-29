@@ -83,9 +83,11 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
         return existingRecruiter.id;
       }
 
-      // Create a default recruiter
-      const newRecruiter = await server.prisma.user.create({
-        data: {
+      // Create or retrieve the default recruiter
+      const newRecruiter = await server.prisma.user.upsert({
+        where: { id: 'default-recruiter' },
+        update: {},
+        create: {
           id: 'default-recruiter',
           email: 'recruiter@warmscreen.com',
           name: 'Default Recruiter',
