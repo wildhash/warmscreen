@@ -10,6 +10,8 @@ import { questionRoutes } from './routes/questions';
 import { agentRoutes } from './routes/agents';
 import { voiceRoutes } from './routes/voice';
 import { proctoringRoutes } from './routes/proctoring';
+import { createRedisClient, disconnectRedis, connectRedis } from './lib/redis';
+import { initCache } from './lib/cache';
 
 const envSchema = {
   type: 'object',
@@ -17,6 +19,7 @@ const envSchema = {
   properties: {
     PORT: { type: 'number', default: 3001 },
     DATABASE_URL: { type: 'string' },
+    REDIS_URL: { type: 'string' },
     SENTRY_DSN: { type: 'string' },
     LIVEKIT_URL: { type: 'string' },
     LIVEKIT_API_KEY: { type: 'string' },
@@ -71,6 +74,19 @@ async function buildServer() {
   const prisma = new PrismaClient();
   server.decorate('prisma', prisma);
 
+  // Initialize Redis (optional)
+  const redis = createRedisClient({
+    url: server.config.REDIS_URL,
+    logger: server.log,
+  });
+  server.decorate('redis', redis);
+  initCache(server.log);
+
+  // Connect to Redis if configured
+  if (redis) {
+    await connectRedis(server.log);
+  }
+
   // Register plugins
   await server.register(cors, {
     origin: true,
@@ -101,6 +117,7 @@ async function buildServer() {
   const closeGracefully = async (signal: string) => {
     console.log(`Received ${signal}, closing gracefully`);
     await server.close();
+    await disconnectRedis(server.log);
     await prisma.$disconnect();
     process.exit(0);
   };

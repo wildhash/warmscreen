@@ -1,5 +1,17 @@
 import { FastifyPluginAsync } from 'fastify';
 import { ReflexionSystem } from '@warmscreen/agents';
+import {
+  cacheGet,
+  cacheSet,
+  CacheKeys,
+  CacheTTL,
+} from '../lib/cache';
+
+interface AgentLog {
+  agentType: string;
+  performanceScore: number | null;
+  reflexionLoop: number;
+}
 
 export const agentRoutes: FastifyPluginAsync = async (server) => {
   const reflexion = new ReflexionSystem(server.prisma);
@@ -22,6 +34,14 @@ export const agentRoutes: FastifyPluginAsync = async (server) => {
 
   // Get agent performance metrics
   server.get('/performance', async (request, reply) => {
+    const cacheKey = CacheKeys.AGENTS_PERFORMANCE;
+
+    // Try to get from cache first
+    const cached = await cacheGet<{ performance: unknown[] }>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const logs = await server.prisma.agentLog.findMany({
       where: {
         performanceScore: { not: null },
@@ -29,16 +49,16 @@ export const agentRoutes: FastifyPluginAsync = async (server) => {
     });
 
     // Calculate metrics by agent type
-    const metricsByAgent: Record<string, any> = {};
+    const metricsByAgent: Record<string, { scores: number[]; reflexionLoops: number[] }> = {};
 
-    logs.forEach(log => {
+    logs.forEach((log: AgentLog) => {
       if (!metricsByAgent[log.agentType]) {
         metricsByAgent[log.agentType] = {
           scores: [],
           reflexionLoops: [],
         };
       }
-      metricsByAgent[log.agentType].scores.push(log.performanceScore);
+      metricsByAgent[log.agentType].scores.push(log.performanceScore || 0);
       metricsByAgent[log.agentType].reflexionLoops.push(log.reflexionLoop);
     });
 
@@ -49,7 +69,9 @@ export const agentRoutes: FastifyPluginAsync = async (server) => {
       totalExecutions: data.scores.length,
     }));
 
-    return { performance };
+    const result = { performance };
+    await cacheSet(cacheKey, result, CacheTTL.SHORT);
+    return result;
   });
 
   // Get feedback loops
@@ -72,6 +94,15 @@ export const agentRoutes: FastifyPluginAsync = async (server) => {
   server.get('/patterns', async (request, reply) => {
     const { category, amplified } = request.query as any;
 
+    // Only cache when no filters are applied (common use case)
+    const useCache = !category && amplified === undefined;
+    if (useCache) {
+      const cached = await cacheGet<{ patterns: unknown[] }>(CacheKeys.AGENTS_PATTERNS);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const patterns = await server.prisma.pattern.findMany({
       where: {
         isActive: true,
@@ -81,7 +112,13 @@ export const agentRoutes: FastifyPluginAsync = async (server) => {
       orderBy: { strength: 'desc' },
     });
 
-    return { patterns };
+    const result = { patterns };
+    
+    if (useCache) {
+      await cacheSet(CacheKeys.AGENTS_PATTERNS, result, CacheTTL.MEDIUM);
+    }
+    
+    return result;
   });
 
   // Refine scoring model

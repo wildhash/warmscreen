@@ -2,6 +2,14 @@ import { FastifyPluginAsync } from 'fastify';
 import { CreateInterviewSchema, UpdateInterviewSchema } from '@warmscreen/shared';
 import { ConductorAgent } from '@warmscreen/agents';
 import { ReflexionSystem } from '@warmscreen/agents';
+import {
+  cacheGet,
+  cacheSet,
+  cacheDel,
+  cacheInvalidatePattern,
+  CacheKeys,
+  CacheTTL,
+} from '../lib/cache';
 
 export const interviewRoutes: FastifyPluginAsync = async (server) => {
   const conductor = new ConductorAgent(server.prisma);
@@ -22,6 +30,13 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
 
   // List interviews
   server.get('/', async (request, reply) => {
+    // Try to get from cache first
+    const cacheKey = CacheKeys.INTERVIEWS_LIST;
+    const cached = await cacheGet<{ interviews: unknown[] }>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const interviews = await server.prisma.interview.findMany({
       include: {
         recruiter: {
@@ -32,12 +47,21 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
       take: 50,
     });
 
-    return { interviews };
+    const result = { interviews };
+    await cacheSet(cacheKey, result, CacheTTL.SHORT);
+    return result;
   });
 
   // Get interview by ID
   server.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+    const cacheKey = CacheKeys.interview(id);
+
+    // Try to get from cache first
+    const cached = await cacheGet<{ interview: unknown }>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     const interview = await server.prisma.interview.findUnique({
       where: { id },
@@ -55,7 +79,9 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(404).send({ error: 'Interview not found' });
     }
 
-    return { interview };
+    const result = { interview };
+    await cacheSet(cacheKey, result, CacheTTL.MEDIUM);
+    return result;
   });
 
   // Create interview
@@ -111,6 +137,9 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
       },
     });
 
+    // Invalidate interview list cache
+    await cacheDel(CacheKeys.INTERVIEWS_LIST);
+
     return reply.code(201).send({ interview });
   });
 
@@ -127,6 +156,10 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
         completedAt: data.completedAt ? new Date(data.completedAt) : undefined,
       },
     });
+
+    // Invalidate caches
+    await cacheDel(CacheKeys.interview(id));
+    await cacheDel(CacheKeys.INTERVIEWS_LIST);
 
     return { interview };
   });
@@ -155,6 +188,10 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
         startedAt: new Date(),
       },
     });
+
+    // Invalidate caches
+    await cacheDel(CacheKeys.interview(id));
+    await cacheDel(CacheKeys.INTERVIEWS_LIST);
 
     // Get questions for this position
     const questions = await server.prisma.question.findMany({
@@ -254,6 +291,10 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
         explainability: results.explanation.result,
       },
     });
+
+    // Invalidate caches
+    await cacheDel(CacheKeys.interview(id));
+    await cacheDel(CacheKeys.INTERVIEWS_LIST);
 
     // Trigger learning
     await reflexion.learnFromInterview(id);

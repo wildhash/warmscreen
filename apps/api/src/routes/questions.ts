@@ -1,6 +1,14 @@
 import { FastifyPluginAsync } from 'fastify';
 import { CreateQuestionSchema } from '@warmscreen/shared';
 import { ReflexionSystem } from '@warmscreen/agents';
+import {
+  cacheGet,
+  cacheSet,
+  cacheDel,
+  cacheInvalidatePattern,
+  CacheKeys,
+  CacheTTL,
+} from '../lib/cache';
 
 export const questionRoutes: FastifyPluginAsync = async (server) => {
   const reflexion = new ReflexionSystem(server.prisma);
@@ -8,6 +16,13 @@ export const questionRoutes: FastifyPluginAsync = async (server) => {
   // List questions
   server.get('/', async (request, reply) => {
     const { position, category } = request.query as any;
+    const cacheKey = CacheKeys.questionsList(position, category);
+
+    // Try to get from cache first
+    const cached = await cacheGet<{ questions: unknown[] }>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     const questions = await server.prisma.question.findMany({
       where: {
@@ -22,12 +37,21 @@ export const questionRoutes: FastifyPluginAsync = async (server) => {
       orderBy: { correlationScore: 'desc' },
     });
 
-    return { questions };
+    const result = { questions };
+    await cacheSet(cacheKey, result, CacheTTL.LONG);
+    return result;
   });
 
   // Get question by ID
   server.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+    const cacheKey = CacheKeys.question(id);
+
+    // Try to get from cache first
+    const cached = await cacheGet<{ question: unknown }>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     const question = await server.prisma.question.findUnique({
       where: { id },
@@ -41,7 +65,9 @@ export const questionRoutes: FastifyPluginAsync = async (server) => {
       return reply.code(404).send({ error: 'Question not found' });
     }
 
-    return { question };
+    const result = { question };
+    await cacheSet(cacheKey, result, CacheTTL.EXTENDED);
+    return result;
   });
 
   // Create question
@@ -67,6 +93,9 @@ export const questionRoutes: FastifyPluginAsync = async (server) => {
       },
     });
 
+    // Invalidate questions list caches
+    await cacheInvalidatePattern('questions:list:*');
+
     return reply.code(201).send({ question });
   });
 
@@ -84,6 +113,10 @@ export const questionRoutes: FastifyPluginAsync = async (server) => {
         lastUsed: new Date(),
       },
     });
+
+    // Invalidate caches
+    await cacheDel(CacheKeys.question(id));
+    await cacheInvalidatePattern('questions:list:*');
 
     return { question };
   });
@@ -149,6 +182,11 @@ export const questionRoutes: FastifyPluginAsync = async (server) => {
           error: error.message 
         });
       }
+    }
+
+    // Invalidate questions list caches if any were created
+    if (createdQuestions.length > 0) {
+      await cacheInvalidatePattern('questions:list:*');
     }
 
     return {
