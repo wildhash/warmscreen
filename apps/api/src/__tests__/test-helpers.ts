@@ -213,6 +213,23 @@ export async function buildTestServer(): Promise<FastifyInstance> {
 
   await server.register(websocket);
 
+  // Root route
+  server.get('/', async () => {
+    return {
+      name: 'Warmscreen API',
+      version: '0.1.0',
+      status: 'ok',
+      endpoints: {
+        health: '/health',
+        interviews: '/api/interviews',
+        questions: '/api/questions',
+        agents: '/api/agents',
+        voice: '/api/voice',
+        proctoring: '/api/proctoring',
+      },
+    };
+  });
+
   // Health check
   server.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };

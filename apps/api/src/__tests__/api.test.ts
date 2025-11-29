@@ -2,6 +2,34 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { FastifyInstance } from 'fastify';
 import { buildTestServer, seedTestData, getMockData } from './test-helpers';
 
+describe('Root Route', () => {
+  let server: FastifyInstance;
+
+  beforeAll(async () => {
+    server = await buildTestServer();
+  });
+
+  afterAll(async () => {
+    await server.close();
+  });
+
+  it('should return API info', async () => {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/',
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body);
+    expect(body.name).toBe('Warmscreen API');
+    expect(body.version).toBe('0.1.0');
+    expect(body.status).toBe('ok');
+    expect(body.endpoints).toBeDefined();
+    expect(body.endpoints.health).toBe('/health');
+    expect(body.endpoints.interviews).toBe('/api/interviews');
+  });
+});
+
 describe('Health Check', () => {
   let server: FastifyInstance;
 
