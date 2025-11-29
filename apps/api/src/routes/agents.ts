@@ -58,7 +58,8 @@ export const agentRoutes: FastifyPluginAsync = async (server) => {
           reflexionLoops: [],
         };
       }
-      metricsByAgent[log.agentType].scores.push(log.performanceScore || 0);
+      // performanceScore is guaranteed non-null by the where clause
+      metricsByAgent[log.agentType].scores.push(log.performanceScore as number);
       metricsByAgent[log.agentType].reflexionLoops.push(log.reflexionLoop);
     });
 
