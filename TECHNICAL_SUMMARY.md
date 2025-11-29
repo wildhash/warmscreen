@@ -205,7 +205,7 @@ Final → Scorer → Narrator
 
 ### Required Services:
 1. **PostgreSQL 15**: Main database
-2. **Redis** (optional): Caching
+2. **Redis** (optional): Caching for improved API performance
 3. **LiveKit** (optional): Voice communication
 4. **Deepgram** (optional): Speech-to-text
 
@@ -213,6 +213,9 @@ Final → Scorer → Narrator
 ```bash
 # Database
 DATABASE_URL=postgresql://user:pass@localhost:5432/warmscreen
+
+# Redis (optional - enables caching for better performance)
+REDIS_URL=redis://localhost:6379
 
 # Voice (optional)
 LIVEKIT_URL=wss://...
@@ -223,6 +226,33 @@ DEEPGRAM_API_KEY=...
 # Observability (optional)
 SENTRY_DSN=...
 ```
+
+## Redis Caching
+
+### Overview
+The API uses Redis for caching high-traffic routes to improve performance. Caching is optional - the application works without Redis, just without the performance benefits.
+
+### Cache Keys and TTLs
+| Key Pattern | Description | TTL |
+|-------------|-------------|-----|
+| `interviews:list` | Interview list | 30s |
+| `interviews:{id}` | Individual interview | 60s |
+| `questions:list:{position}:{category}` | Questions by filters | 120s |
+| `questions:{id}` | Individual question | 300s |
+| `agents:performance` | Agent performance metrics | 30s |
+| `agents:patterns` | High-signal patterns | 60s |
+
+### Cache Invalidation
+- Interview create/update/start/finalize invalidates interview caches
+- Question create/update/metrics invalidates question caches
+- Pattern-based invalidation for bulk operations
+
+### Disabling Cache
+To run without caching:
+1. Don't set `REDIS_URL` environment variable, or
+2. Stop the Redis container
+
+The application will continue to work, fetching data directly from the database.
 
 ## API Endpoints
 

@@ -10,21 +10,23 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@warmscreen/database": "*",
-    "@warmscreen/shared": "*",
-    "@warmscreen/agents": "*",
-    "@warmscreen/voice": "*",
-    "@warmscreen/proctoring": "*",
-    "fastify": "^4.25.1",
     "@fastify/cors": "^8.5.0",
+    "@fastify/env": "^4.3.0",
     "@fastify/multipart": "^8.0.0",
     "@fastify/websocket": "^9.0.0",
-    "@fastify/env": "^4.3.0",
     "@sentry/node": "^7.91.0",
+    "@warmscreen/agents": "*",
+    "@warmscreen/database": "*",
+    "@warmscreen/proctoring": "*",
+    "@warmscreen/shared": "*",
+    "@warmscreen/voice": "*",
     "dotenv": "^16.3.1",
+    "fastify": "^4.25.1",
+    "ioredis": "^5.8.2",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/ioredis": "^4.28.10",
     "@types/node": "^20.10.5",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"

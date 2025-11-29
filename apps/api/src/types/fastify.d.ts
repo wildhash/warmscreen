@@ -1,12 +1,15 @@
 import { PrismaClient } from '@warmscreen/database';
+import type { Redis } from 'ioredis';
 import '@fastify/env';
 
 declare module 'fastify' {
   interface FastifyInstance {
     prisma: PrismaClient;
+    redis: Redis | null;
     config: {
       PORT: number;
       DATABASE_URL: string;
+      REDIS_URL?: string;
       SENTRY_DSN?: string;
       LIVEKIT_URL?: string;
       LIVEKIT_API_KEY?: string;
