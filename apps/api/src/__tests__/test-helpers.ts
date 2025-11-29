@@ -129,7 +129,7 @@ export function createMockPrismaClient() {
         
         // Handle increment
         if (opts.data.timesAsked?.increment) {
-          updated.timesAsked = existing.timesAsked + opts.data.timesAsked.increment;
+          updated.timesAsked = (existing.timesAsked || 0) + opts.data.timesAsked.increment;
         }
         
         collection.set(opts.where.id, updated);
