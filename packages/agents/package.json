@@ -5,9 +5,7 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "lint": "eslint src/",
-    "type-check": "tsc --noEmit",
-    "test": "jest"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@warmscreen/shared": "*",

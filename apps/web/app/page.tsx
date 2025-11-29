@@ -40,7 +40,7 @@ export default function Home() {
             <div className="text-4xl mb-4">🎯</div>
             <h3 className="text-xl font-bold mb-2">Real-time Learning</h3>
             <p className="text-gray-600">
-              Q's Database with feedback loops, auto-generating better questions and refining scoring models
+              Q&apos;s Database with feedback loops, auto-generating better questions and refining scoring models
             </p>
           </div>
 
