@@ -80,7 +80,7 @@ async function buildServer() {
     url: server.config.REDIS_URL,
     logger: server.log,
   });
-  server.decorate('redis', redis);
+  server.decorate('redis', redis as typeof server.redis);
   initCache(server.log);
 
   // Connect to Redis if configured
