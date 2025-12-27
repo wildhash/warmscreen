@@ -158,13 +158,12 @@ export class ConductorAgent {
         };
       }
 
-      // Extract from question metadata if available
-      const metadata = question.metadata as any;
-      
+      // Extract from question metadata if available (metadata field doesn't exist in schema yet)
+      // For now, return empty arrays
       return {
-        expectedConcepts: metadata?.expectedConcepts || [],
-        idealResponseCharacteristics: metadata?.idealCharacteristics || [],
-        keyFacts: metadata?.keyFacts || [],
+        expectedConcepts: [],
+        idealResponseCharacteristics: [],
+        keyFacts: [],
       };
     } catch (error) {
       console.error('[ConductorAgent] Failed to retrieve context knowledge:', error);
