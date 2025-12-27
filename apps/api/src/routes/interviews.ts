@@ -228,6 +228,7 @@ export const interviewRoutes: FastifyPluginAsync = async (server) => {
     const agentResults = await conductor.processResponse({
       interviewId: id,
       questionId,
+      questionText: question.content,
       transcript,
       questionCategory: question.category,
       position: interview.position,

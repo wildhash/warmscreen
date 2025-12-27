@@ -6,7 +6,15 @@ import {
   ScorerAgent, 
   NarratorAgent 
 } from '../agents';
-import { AgentOutput, AgentType } from '@warmscreen/shared';
+import { 
+  AgentOutput, 
+  AgentType, 
+  VerifierOutput,
+  AnalyzerOutput,
+  TaggerOutput,
+  ScorerOutput,
+  ContextKnowledge
+} from '@warmscreen/shared';
 import { PrismaClient } from '@warmscreen/database';
 
 /**
@@ -38,13 +46,15 @@ export class ConductorAgent {
   async processResponse(context: {
     interviewId: string;
     questionId: string;
+    questionText: string;
     transcript: string;
     questionCategory: string;
     position: string;
   }): Promise<{
     analyzed: AgentOutput;
     tagged: AgentOutput;
-    verified: AgentOutput;
+    scored: AgentOutput;
+    verified: VerifierOutput | AgentOutput;
   }> {
     // Step 1: Analyzer analyzes the response
     const analyzedOutput = await this.analyzer.execute({
@@ -65,25 +75,137 @@ export class ConductorAgent {
       },
     });
 
-    // Step 3: Verifier verifies both outputs
-    const verifiedOutput = await this.verifier.execute({
-      type: 'VERIFIER',
+    // Step 3: Scorer scores the response
+    const scoredOutput = await this.scorer.execute({
+      type: 'SCORER',
       context: {
-        agentOutputs: [analyzedOutput, taggedOutput],
+        responses: [{ 
+          questionId: context.questionId,
+          transcript: context.transcript,
+          duration: 0,
+        }],
+        scoringModel: { weights: {} },
+        position: context.position,
       },
     });
+
+    // Step 4: Verifier verifies all outputs with enhanced verification
+    // Try to use the new verification format if we have all required data
+    let verifiedOutput: VerifierOutput | AgentOutput;
+    
+    try {
+      // Retrieve context knowledge from database
+      const contextKnowledge = await this.retrieveContextKnowledge(context.questionId);
+      
+      // Map agent outputs to typed structures
+      const analyzerData = this.mapToAnalyzerOutput(analyzedOutput);
+      const taggerData = this.mapToTaggerOutput(taggedOutput);
+      const scorerData = this.mapToScorerOutput(scoredOutput);
+
+      // Use new verification format
+      verifiedOutput = await this.verifier.execute({
+        candidateTranscript: context.transcript,
+        question: context.questionText,
+        contextKnowledge,
+        agentOutputs: {
+          analyzer: analyzerData,
+          tagger: taggerData,
+          scorer: scorerData,
+        },
+      });
+    } catch (error) {
+      console.error('[ConductorAgent] New verification format failed, falling back to legacy:', error);
+      
+      // Fall back to legacy format for backward compatibility
+      verifiedOutput = await this.verifier.execute({
+        type: 'VERIFIER',
+        context: {
+          agentOutputs: [analyzedOutput, taggedOutput, scoredOutput],
+        },
+      });
+    }
 
     // Log agent actions
     await this.logAgentActions(context.interviewId, [
       analyzedOutput,
       taggedOutput,
-      verifiedOutput,
+      scoredOutput,
+      verifiedOutput as AgentOutput,
     ]);
 
     return {
       analyzed: analyzedOutput,
       tagged: taggedOutput,
+      scored: scoredOutput,
       verified: verifiedOutput,
+    };
+  }
+
+  /**
+   * Retrieve context knowledge for verification
+   */
+  private async retrieveContextKnowledge(questionId: string): Promise<ContextKnowledge> {
+    try {
+      const question = await this.db.question.findUnique({
+        where: { id: questionId },
+      });
+
+      if (!question) {
+        return {
+          expectedConcepts: [],
+          idealResponseCharacteristics: [],
+          keyFacts: [],
+        };
+      }
+
+      // Extract from question metadata if available (metadata field doesn't exist in schema yet)
+      // For now, return empty arrays
+      return {
+        expectedConcepts: [],
+        idealResponseCharacteristics: [],
+        keyFacts: [],
+      };
+    } catch (error) {
+      console.error('[ConductorAgent] Failed to retrieve context knowledge:', error);
+      return {
+        expectedConcepts: [],
+        idealResponseCharacteristics: [],
+        keyFacts: [],
+      };
+    }
+  }
+
+  /**
+   * Map AgentOutput to AnalyzerOutput
+   */
+  private mapToAnalyzerOutput(output: AgentOutput): AnalyzerOutput {
+    const result = output.result || {};
+    return {
+      score: result.score || result.overallScore || output.confidence || 0,
+      confidence: output.confidence,
+      analysis: result.analysis || result.summary || JSON.stringify(result),
+    };
+  }
+
+  /**
+   * Map AgentOutput to TaggerOutput
+   */
+  private mapToTaggerOutput(output: AgentOutput): TaggerOutput {
+    const result = output.result || {};
+    return {
+      tags: result.tags || [],
+      confidence: output.confidence,
+    };
+  }
+
+  /**
+   * Map AgentOutput to ScorerOutput
+   */
+  private mapToScorerOutput(output: AgentOutput): ScorerOutput {
+    const result = output.result || {};
+    return {
+      score: result.overallScore || result.score || 0,
+      breakdown: result.scores || {},
     };
   }
 
