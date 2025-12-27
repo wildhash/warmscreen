@@ -78,17 +78,32 @@ export class VerifierAgent extends BaseAgent {
    * Type guard to discriminate input types
    */
   private isVerifierInput(input: any): input is VerifierInput {
-    return 'candidateTranscript' in input && 'contextKnowledge' in input;
+    return input && typeof input === 'object' && 'candidateTranscript' in input && 'contextKnowledge' in input;
   }
 
   /**
    * Legacy execution path for backward compatibility
    */
   private async executeLegacy(input: AgentInput): Promise<AgentOutput> {
-    const { context, previousOutput, reflexionLoop = 0 } = input;
-    const { agentOutputs } = context;
-
     try {
+      const { context, previousOutput, reflexionLoop = 0 } = input || {};
+      
+      if (!context || !context.agentOutputs) {
+        return this.createOutput(
+          {
+            verified: false,
+            checks: [],
+            issuesFound: 1,
+            recommendations: ['Invalid or missing context'],
+          },
+          0,
+          { error: 'Invalid input format' },
+          reflexionLoop || 0
+        );
+      }
+      
+      const { agentOutputs } = context;
+
       const verification = await this.verifyOutputs(agentOutputs);
       const confidence = this.calculateVerificationConfidence(verification);
 
@@ -113,7 +128,7 @@ export class VerifierAgent extends BaseAgent {
         },
         0,
         { error: error instanceof Error ? error.message : 'Unknown error' },
-        reflexionLoop
+        0
       );
     }
   }
@@ -277,7 +292,7 @@ export class VerifierAgent extends BaseAgent {
       // Cache lowercased transcript for performance
       const lowerTranscript = candidateTranscript.toLowerCase();
 
-      // Check for contradictions
+      // Check for contradictions from static dictionary
       for (const [fact, keywords] of Object.entries(VerifierAgent.CONTRADICTIONS)) {
         const hasKeywords = keywords.some(kw => lowerTranscript.includes(kw.toLowerCase()));
         if (hasKeywords) {
@@ -288,9 +303,26 @@ export class VerifierAgent extends BaseAgent {
         }
       }
 
+      // Check for contradictions from context knowledge key facts
+      const keyFacts = contextKnowledge.keyFacts || [];
+      for (const fact of keyFacts) {
+        const lowerFact = fact.toLowerCase();
+        
+        // Extract keywords from the fact (simple heuristic: words longer than 3 characters)
+        const words = fact.split(/\s+/).filter(w => w.length > 3);
+        const hasKeywords = words.some(word => lowerTranscript.includes(word.toLowerCase()));
+        
+        if (hasKeywords) {
+          const isPositiveAssertion = this.checkPositiveAssertion(lowerTranscript, fact);
+          if (isPositiveAssertion) {
+            errors.push(`Factual error: ${fact}`);
+          }
+        }
+      }
+
       // Check concept coverage
       const expectedConcepts = contextKnowledge.expectedConcepts || [];
-      const mentionedConcepts = expectedConcepts.filter(concept => 
+      const mentionedConcepts = expectedConcepts.filter((concept: string) => 
         lowerTranscript.includes(concept.toLowerCase()) || 
         this.hasRelatedTerm(lowerTranscript, concept)
       );
@@ -510,6 +542,12 @@ export class VerifierAgent extends BaseAgent {
   private calculateVerificationConfidence(verification: VerificationResult): number {
     const passedChecks = verification.checks.filter(c => c.passed).length;
     const totalChecks = verification.checks.length;
-    return totalChecks > 0 ? passedChecks / totalChecks : 0.5;
+    
+    if (totalChecks === 0) {
+      // When there are no checks, return low confidence to indicate uncertainty
+      return 0.5;
+    }
+    
+    return passedChecks / totalChecks;
   }
 }
