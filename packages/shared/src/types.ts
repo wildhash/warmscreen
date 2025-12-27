@@ -148,3 +148,49 @@ export interface PatternMatch {
   matchScore: number;
   context: any;
 }
+
+// Verifier Agent Types
+export interface VerifierInput {
+  candidateTranscript: string;
+  question: string;
+  contextKnowledge: ContextKnowledge;
+  agentOutputs: {
+    analyzer: AnalyzerOutput;
+    tagger: TaggerOutput;
+    scorer: ScorerOutput;
+  };
+}
+
+export interface ContextKnowledge {
+  expectedConcepts: string[];
+  idealResponseCharacteristics: string[];
+  keyFacts: string[];
+}
+
+export interface AnalyzerOutput {
+  score: number;
+  confidence: number;
+  analysis: string;
+}
+
+export interface TaggerOutput {
+  tags: string[];
+  confidence: number;
+}
+
+export interface ScorerOutput {
+  score: number;
+  breakdown: Record<string, number>;
+}
+
+export interface VerifierOutput {
+  confidence_score: number;
+  is_consistent: boolean;
+  is_accurate: boolean;
+  reflexion_required: boolean;
+  critique_reasoning: string;
+  recommended_refinement: {
+    agent_to_refine: string;
+    critique_prompt_injection: string;
+  };
+}
