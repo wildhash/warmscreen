@@ -6,13 +6,18 @@ import Link from 'next/link';
 import { fetcher } from '@/lib/api';
 import { format } from 'date-fns';
 import { ArrowLeft, Play } from 'lucide-react';
+import {
+  getDecisionBadgeClass,
+  getStatusBadgeClass,
+  type InterviewStatus,
+} from '../badges';
 
 type InterviewDetail = {
   id: string;
   candidateName: string;
   candidateEmail: string;
   position: string;
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED';
+  status: InterviewStatus;
   scheduledAt: string;
   score?: number | null;
   decision?: string | null;
@@ -30,23 +35,6 @@ type InterviewDetail = {
     question: { content: string };
   }>;
 };
-
-function getStatusBadgeClass(status: InterviewDetail['status']) {
-  switch (status) {
-    case 'COMPLETED':
-      return 'badge badge-completed';
-    case 'IN_PROGRESS':
-      return 'badge badge-in-progress';
-    case 'SCHEDULED':
-    default:
-      return 'badge badge-scheduled';
-  }
-}
-
-function getDecisionBadgeClass(decision: string) {
-  if (decision.includes('HIRE')) return 'badge badge-hire';
-  return 'badge badge-no-hire';
-}
 
 export default function InterviewDetailPage() {
   const params = useParams();

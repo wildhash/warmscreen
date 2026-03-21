@@ -40,31 +40,22 @@ function buildTrend(interviews: Interview[], days: number) {
       date,
       label: format(date, 'MMM d'),
       completed: 0,
-      avgScore: null as number | null,
     };
   });
 
-  const byDay = new Map<number, { count: number; scoreSum: number }>();
+  const byDay = new Map<number, number>();
   for (const interview of interviews) {
     if (!interview.scheduledAt) continue;
     if (interview.status !== 'COMPLETED') continue;
 
     const dayKey = startOfDay(new Date(interview.scheduledAt)).getTime();
-    const prev = byDay.get(dayKey) || { count: 0, scoreSum: 0 };
-    const score = typeof interview.score === 'number' ? interview.score : null;
-    byDay.set(dayKey, {
-      count: prev.count + 1,
-      scoreSum: prev.scoreSum + (score ?? 0),
-    });
+    const prev = byDay.get(dayKey) ?? 0;
+    byDay.set(dayKey, prev + 1);
   }
 
   for (const bucket of buckets) {
     const dayKey = bucket.date.getTime();
-    const stats = byDay.get(dayKey);
-    if (!stats) continue;
-
-    bucket.completed = stats.count;
-    bucket.avgScore = stats.count > 0 ? Number((stats.scoreSum / stats.count).toFixed(2)) : null;
+    bucket.completed = byDay.get(dayKey) ?? 0;
   }
 
   return buckets;

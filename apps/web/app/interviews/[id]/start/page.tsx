@@ -26,6 +26,10 @@ type InterviewQuestion = {
   skillTags?: string[];
 };
 
+type VoiceSession = {
+  roomUrl: string;
+};
+
 export default function InterviewStartPage() {
   const params = useParams();
   const router = useRouter();
@@ -37,7 +41,7 @@ export default function InterviewStartPage() {
   const [starting, setStarting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'starting' | 'active' | 'ending'>('idle');
-  const [voiceSession, setVoiceSession] = useState<any | null>(null);
+  const [voiceSession, setVoiceSession] = useState<VoiceSession | null>(null);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceTranscripts, setVoiceTranscripts] = useState<VoiceTranscript[]>([]);
   const [fullTranscript, setFullTranscript] = useState('');
@@ -104,7 +108,8 @@ export default function InterviewStartPage() {
         interviewId: activeInterview.id,
         participantName: activeInterview.candidateName,
       });
-      setVoiceSession(session.session);
+      const raw = session.session;
+      setVoiceSession(raw && typeof raw.roomUrl === 'string' ? { roomUrl: raw.roomUrl } : null);
       setVoiceStatus('active');
     } catch (err) {
       console.error('Failed to start voice session:', err);

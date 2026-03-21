@@ -5,6 +5,11 @@ import Link from 'next/link';
 import { fetcher, apiPost } from '@/lib/api';
 import { format } from 'date-fns';
 import { Plus, Search, X } from 'lucide-react';
+import {
+  getDecisionBadgeClass,
+  getStatusBadgeClass,
+  type InterviewStatus,
+} from './badges';
 
 type InterviewListItem = {
   id: string;
@@ -12,7 +17,7 @@ type InterviewListItem = {
   candidateEmail: string;
   position: string;
   scheduledAt: string;
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED';
+  status: InterviewStatus;
   score?: number | null;
   decision?: string | null;
 };
@@ -21,23 +26,6 @@ function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).slice(0, 2);
   const initials = parts.map((p) => p[0]).join('');
   return initials.toUpperCase();
-}
-
-function getStatusBadgeClass(status: InterviewListItem['status']) {
-  switch (status) {
-    case 'COMPLETED':
-      return 'badge badge-completed';
-    case 'IN_PROGRESS':
-      return 'badge badge-in-progress';
-    case 'SCHEDULED':
-    default:
-      return 'badge badge-scheduled';
-  }
-}
-
-function getDecisionBadgeClass(decision: string) {
-  if (decision.includes('HIRE')) return 'badge badge-hire';
-  return 'badge badge-no-hire';
 }
 
 export default function InterviewsPage() {
