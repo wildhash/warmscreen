@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { fetcher } from '@/lib/api';
-import { format } from 'date-fns';
 import { ArrowLeft, Play } from 'lucide-react';
 import {
   getDecisionBadgeClass,
   getStatusBadgeClass,
   type InterviewStatus,
 } from '../badges';
+import { safeFormatDate } from '../date';
 
 type InterviewDetail = {
   id: string;
@@ -132,7 +132,7 @@ export default function InterviewDetailPage() {
               <div className="text-[12px] text-zinc-600 mt-2">{interview.candidateEmail}</div>
               <div className="text-[12px] text-zinc-300 mt-1">{interview.position}</div>
               <div className="text-[11px] text-zinc-600 mt-3 font-mono">
-                Scheduled: {format(new Date(interview.scheduledAt), 'MMM d, yyyy p')}
+                Scheduled: {safeFormatDate(interview.scheduledAt, 'MMM d, yyyy p')}
               </div>
             </div>
 

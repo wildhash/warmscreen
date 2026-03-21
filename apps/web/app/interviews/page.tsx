@@ -3,13 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetcher, apiPost } from '@/lib/api';
-import { format } from 'date-fns';
 import { Plus, Search, X } from 'lucide-react';
 import {
   getDecisionBadgeClass,
   getStatusBadgeClass,
   type InterviewStatus,
 } from './badges';
+import { safeFormatDate } from './date';
 
 type InterviewListItem = {
   id: string;
@@ -26,6 +26,20 @@ function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).slice(0, 2);
   const initials = parts.map((p) => p[0]).join('');
   return initials.toUpperCase();
+}
+
+function getErrorMessage(error: unknown) {
+  if (!error) return null;
+  if (typeof error === 'string') return error;
+  if (error instanceof Error) return error.message;
+
+  if (typeof error === 'object') {
+    const record = error as Record<string, unknown>;
+    if (typeof record.details === 'string') return record.details;
+    if (typeof record.message === 'string') return record.message;
+  }
+
+  return null;
 }
 
 export default function InterviewsPage() {
@@ -96,9 +110,9 @@ export default function InterviewsPage() {
         await apiPost('/api/interviews/livekit-agent/initialize', {
           interviewId: result.interview.id,
         });
-      } catch (agentError: any) {
+      } catch (agentError: unknown) {
         console.error('Failed to initialize LiveKit agent:', agentError);
-        const errorDetails = agentError.details || agentError.message || 'Unknown error';
+        const errorDetails = getErrorMessage(agentError) ?? 'Unknown error';
         // Don't fail the entire operation if agent initialization fails
         setCreateError(`Interview created successfully, but LiveKit agent initialization failed: ${errorDetails}. You can retry initialization later.`);
       }
@@ -114,9 +128,9 @@ export default function InterviewsPage() {
       
       // Refresh interviews list
       fetchInterviews();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create interview:', error);
-      const errorMessage = error.details || error.message || 'An unexpected error occurred';
+      const errorMessage = getErrorMessage(error) ?? 'An unexpected error occurred';
       setCreateError(`Failed to create interview: ${errorMessage}. Please check your input and try again.`);
     } finally {
       setCreating(false);
@@ -237,7 +251,7 @@ export default function InterviewsPage() {
                       )}
                     </td>
                     <td className="text-zinc-600 font-mono text-[11px]">
-                      {format(new Date(interview.scheduledAt), 'MMM d, yyyy')}
+                      {safeFormatDate(interview.scheduledAt, 'MMM d, yyyy')}
                     </td>
                   </tr>
                 ))}

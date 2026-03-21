@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { fetcher } from '@/lib/api';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { format, startOfDay, subDays } from 'date-fns';
+import type { InterviewStatus } from '../interviews/badges';
 
 type Interview = {
   id: string;
@@ -11,7 +12,7 @@ type Interview = {
   candidateEmail: string;
   position: string;
   scheduledAt: string;
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED';
+  status: InterviewStatus;
   score?: number | null;
 };
 

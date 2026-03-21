@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { fetcher, apiPost } from '@/lib/api';
 import { ArrowLeft, Mic, Play, Square } from 'lucide-react';
+import type { InterviewStatus } from '../../badges';
 
 interface VoiceTranscript {
   text: string;
@@ -16,7 +17,7 @@ type Interview = {
   id: string;
   candidateName: string;
   position: string;
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED';
+  status: InterviewStatus;
 };
 
 type InterviewQuestion = {
@@ -28,6 +29,11 @@ type InterviewQuestion = {
 
 type VoiceSession = {
   roomUrl: string;
+};
+
+type VoiceCloneResponse = {
+  voiceId: string;
+  status: string;
 };
 
 export default function InterviewStartPage() {
@@ -47,7 +53,7 @@ export default function InterviewStartPage() {
   const [fullTranscript, setFullTranscript] = useState('');
   const [cloneForm, setCloneForm] = useState({ voiceName: '', sampleUrl: '', description: '' });
   const [cloneStatus, setCloneStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
-  const [cloneResponse, setCloneResponse] = useState<any | null>(null);
+  const [cloneResponse, setCloneResponse] = useState<VoiceCloneResponse | null>(null);
 
   useEffect(() => {
     if (!params.id) return;
@@ -62,6 +68,16 @@ export default function InterviewStartPage() {
         setLoading(false);
       });
   }, [params.id]);
+
+  useEffect(() => {
+    const interviewId = Array.isArray(params.id) ? params.id[0] : params.id;
+    if (!interviewId) return;
+    if (loading) return;
+
+    if (interview?.status === 'COMPLETED') {
+      router.push(`/interviews/${interviewId}`);
+    }
+  }, [interview?.status, loading, params.id, router]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -144,7 +160,12 @@ export default function InterviewStartPage() {
     setVoiceError(null);
     try {
       const response = await apiPost('/api/voice/clone', cloneForm);
-      setCloneResponse(response.clone);
+      const raw = response.clone;
+      setCloneResponse(
+        raw && typeof raw.voiceId === 'string' && typeof raw.status === 'string'
+          ? { voiceId: raw.voiceId, status: raw.status }
+          : null
+      );
       setCloneStatus('success');
     } catch (err) {
       console.error('Failed to clone voice:', err);
@@ -231,11 +252,6 @@ export default function InterviewStartPage() {
     );
   }
 
-  if (interview.status === 'COMPLETED') {
-    router.push(`/interviews/${params.id}`);
-    return null;
-  }
-
   if (interview.status === 'SCHEDULED' || questions.length === 0) {
     return (
       <div className="page-container">
@@ -282,7 +298,9 @@ export default function InterviewStartPage() {
 
                 <button
                   type="button"
-                  onClick={() => startVoiceSession(interview)}
+                  onClick={() => {
+                    void startVoiceSession(interview).catch(() => {});
+                  }}
                   disabled={voiceStatus === 'starting' || voiceStatus === 'active'}
                   className="btn btn-primary mt-5 w-full justify-center"
                 >
@@ -449,7 +467,9 @@ export default function InterviewStartPage() {
               <div className="flex gap-2 mt-5">
                 <button
                   type="button"
-                  onClick={() => startVoiceSession()}
+                  onClick={() => {
+                    void startVoiceSession().catch(() => {});
+                  }}
                   disabled={voiceStatus === 'active' || voiceStatus === 'starting'}
                   className="btn btn-primary flex-1 justify-center"
                 >
