@@ -19,11 +19,12 @@ type InterviewsResponse = {
 
 export function useInterviews() {
   const swr = useSWR<InterviewsResponse>('/api/interviews', fetcher);
+  const error = swr.error instanceof Error ? swr.error : undefined;
 
   return {
     interviews: swr.data?.interviews ?? [],
     isLoading: swr.isLoading,
-    error: swr.error as Error | undefined,
+    error,
     mutate: swr.mutate,
   };
 }

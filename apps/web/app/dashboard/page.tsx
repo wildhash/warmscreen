@@ -50,9 +50,13 @@ export default function DashboardPage() {
 
   const totalInterviews = stats.interviews.length;
   const completedInterviews = stats.interviews.filter((i) => i.status === 'COMPLETED').length;
-  const scoredInterviews = stats.interviews.filter((i) => typeof i.score === 'number');
-  const avgScore =
-    scoredInterviews.reduce((sum, i) => sum + (i.score || 0), 0) / (scoredInterviews.length || 1);
+  const completedWithScore = stats.interviews.filter(
+    (i) => i.status === 'COMPLETED' && typeof i.score === 'number'
+  );
+  const avgScore = completedWithScore.length
+    ? completedWithScore.reduce((sum, i) => sum + (i.score || 0), 0) / completedWithScore.length
+    : 0;
+  const avgScoreDisplay = completedWithScore.length ? avgScore.toFixed(1) : '—';
 
   return (
     <AppShell>
@@ -75,7 +79,7 @@ export default function DashboardPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Total Interviews" value={totalInterviews} tone="primary" />
             <StatCard label="Completed" value={completedInterviews} tone="success" />
-            <StatCard label="Average Score" value={avgScore.toFixed(1)} tone="primary" />
+            <StatCard label="Average Score" value={avgScoreDisplay} tone="primary" />
             <StatCard label="Active Patterns" value={stats.patterns.length} tone="warning" />
           </div>
         </Section>

@@ -5,6 +5,9 @@ export type DecisionBadgeProps = {
 };
 
 export function DecisionBadge({ decision }: DecisionBadgeProps) {
-  const variant = decision.includes('HIRE') ? 'success' : 'danger';
+  const normalized = decision.toUpperCase();
+  const isPositive = normalized === 'HIRE' || normalized === 'STRONG_HIRE';
+  const isNegative = normalized === 'NO_HIRE' || normalized === 'STRONG_NO_HIRE';
+  const variant = isPositive ? 'success' : isNegative ? 'danger' : 'default';
   return <Badge variant={variant}>{decision}</Badge>;
 }

@@ -8,10 +8,11 @@ type DefaultRecruiterResponse = {
 
 export function useDefaultRecruiter() {
   const swr = useSWR<DefaultRecruiterResponse>('/api/interviews/config/default-recruiter', fetcher);
+  const error = swr.error instanceof Error ? swr.error : undefined;
 
   return {
     recruiterId: swr.data?.recruiterId ?? 'default-recruiter',
     isLoading: swr.isLoading,
-    error: swr.error as Error | undefined,
+    error,
   };
 }

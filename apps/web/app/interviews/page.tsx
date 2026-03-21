@@ -18,9 +18,13 @@ import { useInterviews } from '@/hooks/useInterviews';
 
 export default function InterviewsPage() {
   const { interviews, isLoading, error, mutate } = useInterviews();
-  const { recruiterId } = useDefaultRecruiter();
+  const { recruiterId, error: recruiterError } = useDefaultRecruiter();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+
+  const configNotice = recruiterError
+    ? 'Using fallback recruiter configuration because the default recruiter could not be loaded. Interview creation may fail until this is fixed.'
+    : null;
 
   return (
     <AppShell>
@@ -36,11 +40,30 @@ export default function InterviewsPage() {
       />
 
       <div className="mt-8 space-y-6">
+        {configNotice && (
+          <Card className="border-warning/20 bg-warning-soft p-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm font-semibold">Configuration</div>
+              <Badge variant="warning">Fallback</Badge>
+            </div>
+            <div className="mt-2 text-sm text-foreground-muted">{configNotice}</div>
+          </Card>
+        )}
+
         {notice && (
           <Card className="border-warning/20 bg-warning-soft p-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm font-semibold">Notice</div>
-              <Badge variant="warning">Action needed</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="warning">Action needed</Badge>
+                <button
+                  type="button"
+                  onClick={() => setNotice(null)}
+                  className="text-xs font-semibold text-foreground-muted hover:text-foreground"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
             <div className="mt-2 text-sm text-foreground-muted">{notice}</div>
           </Card>
@@ -51,7 +74,7 @@ export default function InterviewsPage() {
         ) : error ? (
           <EmptyState
             title="Unable to load interviews"
-            description={error.message}
+            description={error.message || 'Something went wrong. Please try again.'}
             action={
               <Link
                 href="/"

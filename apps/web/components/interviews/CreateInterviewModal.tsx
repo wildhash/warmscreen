@@ -31,6 +31,13 @@ const emptyForm: FormState = {
   scheduledAt: '',
 };
 
+const toErrorMessage = (err: unknown) => {
+  if (!err || typeof err !== 'object') return 'An unexpected error occurred';
+  if ('details' in err && typeof (err as any).details === 'string') return (err as any).details;
+  if ('message' in err && typeof (err as any).message === 'string') return (err as any).message;
+  return 'An unexpected error occurred';
+};
+
 export function CreateInterviewModal({
   open,
   onOpenChange,
@@ -54,6 +61,7 @@ export function CreateInterviewModal({
   const close = () => {
     if (creating) return;
     setError(null);
+    setForm(emptyForm);
     onOpenChange(false);
   };
 
@@ -61,11 +69,17 @@ export function CreateInterviewModal({
     event.preventDefault();
     if (!canSubmit) return;
 
+    const scheduledAtDate = new Date(form.scheduledAt);
+    if (Number.isNaN(scheduledAtDate.getTime())) {
+      setError('Invalid scheduled date and time. Please pick a valid value.');
+      return;
+    }
+
     setCreating(true);
     setError(null);
 
     try {
-      const scheduledAtISO = new Date(form.scheduledAt).toISOString();
+      const scheduledAtISO = scheduledAtDate.toISOString();
 
       const result = await apiPost('/api/interviews', {
         candidateName: form.candidateName,
@@ -79,8 +93,8 @@ export function CreateInterviewModal({
         await apiPost('/api/interviews/livekit-agent/initialize', {
           interviewId: result.interview.id,
         });
-      } catch (agentError: any) {
-        const errorDetails = agentError.details || agentError.message || 'Unknown error';
+      } catch (agentError: unknown) {
+        const errorDetails = toErrorMessage(agentError);
         onNotice?.(
           `Interview created, but LiveKit agent initialization failed: ${errorDetails}. You can retry later.`
         );
@@ -88,10 +102,15 @@ export function CreateInterviewModal({
 
       setForm(emptyForm);
       onOpenChange(false);
-      await onCreated();
-    } catch (createError: any) {
-      const errorDetails =
-        createError.details || createError.message || 'An unexpected error occurred';
+
+      try {
+        await onCreated();
+      } catch (refreshError: unknown) {
+        console.error('Post-create refresh failed:', refreshError);
+        onNotice?.('Interview created, but the page did not refresh automatically. Please reload.');
+      }
+    } catch (createError: unknown) {
+      const errorDetails = toErrorMessage(createError);
       setError(`Failed to create interview: ${errorDetails}`);
     } finally {
       setCreating(false);

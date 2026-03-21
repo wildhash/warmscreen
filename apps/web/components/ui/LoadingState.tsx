@@ -7,13 +7,17 @@ export type LoadingStateProps = {
 
 export function LoadingState({ label = 'Loading...', className }: LoadingStateProps) {
   return (
-    <div className={cn('flex items-center gap-3 text-sm text-foreground-muted', className)}>
+    <div
+      className={cn('flex items-center gap-3 text-sm text-foreground-muted', className)}
+      role="status"
+      aria-live="polite"
+    >
       <svg
         className="h-4 w-4 animate-spin"
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        aria-hidden
+        aria-hidden="true"
       >
         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
         <path

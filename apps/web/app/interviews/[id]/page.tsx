@@ -15,8 +15,7 @@ import { Section } from '@/components/ui/Section';
 import { useInterview } from '@/hooks/useInterview';
 
 export default function InterviewDetailPage() {
-  const params = useParams<{ id: string }>();
-  const interviewId = typeof params.id === 'string' ? params.id : undefined;
+  const { id: interviewId } = useParams<{ id: string }>();
   const { data, isLoading, error } = useInterview(interviewId);
 
   if (isLoading) {
@@ -141,7 +140,7 @@ export default function InterviewDetailPage() {
         <Section title="Interview responses">
           <Card className="p-6">
             <div className="space-y-6">
-              {interview.responses?.map((response: any, i: number) => (
+              {interview.responses?.map((response, i) => (
                 <div
                   key={response.id}
                   className="border-b border-border pb-6 last:border-b-0 last:pb-0"
@@ -154,9 +153,9 @@ export default function InterviewDetailPage() {
                   </div>
                   <p className="mt-3 text-sm text-foreground-muted">{response.transcript}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {response.tags?.map((tag: string) => (
+                    {response.tags?.map((tag, index) => (
                       <span
-                        key={tag}
+                        key={`${response.id}:${tag}:${index}`}
                         className="rounded-[var(--radius-sm)] bg-primary-soft px-2 py-1 text-xs text-primary"
                       >
                         {tag}

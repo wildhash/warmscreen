@@ -37,10 +37,11 @@ export function useDashboardStats() {
       patterns: patternsData.patterns,
     };
   });
+  const error = swr.error instanceof Error ? swr.error : undefined;
 
   return {
     stats: swr.data,
     isLoading: swr.isLoading,
-    error: swr.error as Error | undefined,
+    error,
   };
 }
