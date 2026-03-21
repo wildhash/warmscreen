@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono, Syne } from 'next/font/google';
 
 import { AppNav } from './components/app-nav';
@@ -22,6 +22,9 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'WarmScreen — AI Recruiter',
   description: 'Self-evolving AI recruiter with 7-agent swarm intelligence',
+};
+
+export const viewport: Viewport = {
   themeColor: '#09090b',
 };
 

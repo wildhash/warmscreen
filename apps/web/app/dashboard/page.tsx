@@ -216,7 +216,7 @@ export default function DashboardPage() {
                     allowDecimals={false}
                   />
                   <Tooltip
-                    formatter={(value: number, name: string, item: any) => {
+                    formatter={(value: number, name: string) => {
                       if (name === 'completed') return [value, 'Completed'];
                       return [value, name];
                     }}
