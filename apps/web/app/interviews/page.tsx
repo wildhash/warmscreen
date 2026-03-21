@@ -56,6 +56,7 @@ export default function InterviewsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [createNotice, setCreateNotice] = useState('');
   const [defaultRecruiterId, setDefaultRecruiterId] = useState('default-recruiter');
   const [query, setQuery] = useState('');
   const [formData, setFormData] = useState({
@@ -95,6 +96,7 @@ export default function InterviewsPage() {
     e.preventDefault();
     setCreating(true);
     setCreateError('');
+    setCreateNotice('');
 
     try {
       // Convert local datetime to ISO format
@@ -114,22 +116,14 @@ export default function InterviewsPage() {
       const result = await apiPost('/api/interviews', interviewData);
       
       // Initialize LiveKit agent for the interview
-      let livekitInitFailed = false;
+      let livekitError: string | null = null;
       try {
         await apiPost('/api/interviews/livekit-agent/initialize', {
           interviewId: result.interview.id,
         });
       } catch (agentError: unknown) {
         console.error('Failed to initialize LiveKit agent:', agentError);
-        const errorDetails = getErrorMessage(agentError) ?? 'Unknown error';
-        // Don't fail the entire operation if agent initialization fails
-        setCreateError(`Interview created successfully, but LiveKit agent initialization failed: ${errorDetails}. You can retry initialization later.`);
-        livekitInitFailed = true;
-      }
-
-      if (livekitInitFailed) {
-        fetchInterviews();
-        return;
+        livekitError = getErrorMessage(agentError) ?? 'Unknown error';
       }
 
       // Reset form and close modal
@@ -143,6 +137,12 @@ export default function InterviewsPage() {
       
       // Refresh interviews list
       fetchInterviews();
+
+      if (livekitError) {
+        setCreateNotice(
+          `Interview created successfully, but LiveKit agent initialization failed: ${livekitError}. You can retry initialization later.`
+        );
+      }
     } catch (error: unknown) {
       console.error('Failed to create interview:', error);
       const errorMessage = getErrorMessage(error) ?? 'An unexpected error occurred';
@@ -198,6 +198,22 @@ export default function InterviewsPage() {
             Create interview
           </button>
         </div>
+
+        {createNotice ? (
+          <div className="card p-4 mb-3.5 border border-amber-500/20 bg-amber-500/[0.06]">
+            <div className="flex items-start justify-between gap-4">
+              <div className="text-[12px] text-amber-200 leading-relaxed">{createNotice}</div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setCreateNotice('')}
+                aria-label="Dismiss"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <div className="card p-5 mb-3.5">
           <div className="relative max-w-md">

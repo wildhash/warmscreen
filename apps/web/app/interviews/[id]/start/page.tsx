@@ -113,8 +113,8 @@ export default function InterviewStartPage() {
     }
   };
 
-  const startVoiceSession = async (interviewContext?: any) => {
-    const activeInterview = interviewContext || interview;
+  const startVoiceSession = async (interviewContext?: Interview) => {
+    const activeInterview = interviewContext ?? interview;
     if (!activeInterview || voiceStatus === 'active' || voiceStatus === 'starting') return;
 
     setVoiceError(null);
@@ -452,6 +452,7 @@ export default function InterviewStartPage() {
                 Tip: be specific and provide examples from your experience.
               </div>
               <button
+                type="button"
                 onClick={submitResponse}
                 disabled={submitting || !transcript.trim()}
                 className="btn btn-primary"
