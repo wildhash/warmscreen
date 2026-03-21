@@ -115,7 +115,7 @@ export default function InterviewStartPage() {
 
   const startVoiceSession = async (interviewContext?: Interview) => {
     const activeInterview = interviewContext ?? interview;
-    if (!activeInterview || voiceStatus === 'active' || voiceStatus === 'starting') return;
+    if (!activeInterview || voiceStatus !== 'idle') return;
 
     setVoiceError(null);
     setVoiceStatus('starting');
@@ -193,6 +193,12 @@ export default function InterviewStartPage() {
   };
 
   const submitResponse = async () => {
+    const currentQuestion = questions[currentQuestionIndex];
+    if (!currentQuestion) {
+      alert('Unable to submit response: question not found.');
+      return;
+    }
+
     if (!transcript.trim()) {
       alert('Please provide an answer');
       return;
@@ -201,7 +207,7 @@ export default function InterviewStartPage() {
     setSubmitting(true);
     try {
       await apiPost(`/api/interviews/${params.id}/responses`, {
-        questionId: questions[currentQuestionIndex].id,
+        questionId: currentQuestion.id,
         transcript,
         duration: 0,
       });
@@ -315,7 +321,7 @@ export default function InterviewStartPage() {
                   onClick={() => {
                     void startVoiceSession(interview).catch(() => {});
                   }}
-                  disabled={voiceStatus === 'starting' || voiceStatus === 'active'}
+                  disabled={voiceStatus !== 'idle'}
                   className="btn btn-primary mt-5 w-full justify-center"
                 >
                   <Mic size={14} />
@@ -489,7 +495,7 @@ export default function InterviewStartPage() {
                   onClick={() => {
                     void startVoiceSession().catch(() => {});
                   }}
-                  disabled={voiceStatus === 'active' || voiceStatus === 'starting'}
+                  disabled={voiceStatus !== 'idle'}
                   className="btn btn-primary flex-1 justify-center"
                 >
                   <Mic size={14} />
