@@ -168,11 +168,16 @@ export default function InterviewStartPage() {
     try {
       const response = await apiPost('/api/voice/clone', cloneForm);
       const raw = response.clone;
-      setCloneResponse(
-        raw && typeof raw.voiceId === 'string' && typeof raw.status === 'string'
-          ? { voiceId: raw.voiceId, status: raw.status }
-          : null
-      );
+      if (!raw || typeof raw.voiceId !== 'string' || typeof raw.status !== 'string') {
+        setCloneResponse(null);
+        setCloneStatus('error');
+        setVoiceError(
+          'Voice cloning response was missing expected fields. Please try again or check the AGI API.'
+        );
+        return;
+      }
+
+      setCloneResponse({ voiceId: raw.voiceId, status: raw.status });
       setCloneStatus('success');
     } catch (err) {
       console.error('Failed to clone voice:', err);

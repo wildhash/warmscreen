@@ -28,7 +28,7 @@ const NAV_ITEMS: NavItem[] = [
     href: '/dashboard',
     label: 'Dashboard',
     icon: BarChart3,
-    isActive: (pathname) => pathname === '/dashboard',
+    isActive: (pathname) => pathname === '/dashboard' || pathname.startsWith('/dashboard/'),
   },
 ];
 
