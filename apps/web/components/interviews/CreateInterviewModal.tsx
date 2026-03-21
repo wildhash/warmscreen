@@ -13,7 +13,7 @@ export type CreateInterviewModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   recruiterId: string;
-  onCreated: () => Promise<void> | void;
+  onCreated: () => Promise<unknown> | void;
   onNotice?: (message: string) => void;
 };
 
