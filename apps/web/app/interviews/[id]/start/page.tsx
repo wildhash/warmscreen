@@ -136,8 +136,10 @@ export default function InterviewStartPage() {
       setVoiceStatus('active');
     } catch (err) {
       console.error('Failed to start voice session:', err);
-      setVoiceError('Unable to start voice agent. Please verify LiveKit/Deepgram credentials.');
       setVoiceStatus('idle');
+      setVoiceError(
+        (prev) => prev ?? 'Unable to start voice agent. Please verify LiveKit/Deepgram credentials.'
+      );
       throw err;
     }
   };

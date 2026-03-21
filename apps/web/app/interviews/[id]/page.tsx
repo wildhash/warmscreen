@@ -218,8 +218,8 @@ export default function InterviewDetailPage() {
 
                 {response.tags && response.tags.length > 0 ? (
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {response.tags.map((tag) => (
-                      <span key={tag} className="skill-tag">
+                    {response.tags.map((tag, idx) => (
+                      <span key={`${tag}-${idx}`} className="skill-tag">
                         {tag}
                       </span>
                     ))}
