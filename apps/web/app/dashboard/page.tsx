@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { fetcher } from '@/lib/api';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { format, startOfDay, subDays } from 'date-fns';
+import { format, isValid, startOfDay, subDays } from 'date-fns';
 import type { InterviewStatus } from '../interviews/badges';
 
 type Interview = {
@@ -49,7 +49,10 @@ function buildTrend(interviews: Interview[], days: number) {
     if (!interview.scheduledAt) continue;
     if (interview.status !== 'COMPLETED') continue;
 
-    const dayKey = startOfDay(new Date(interview.scheduledAt)).getTime();
+    const parsed = new Date(interview.scheduledAt);
+    if (!isValid(parsed)) continue;
+
+    const dayKey = startOfDay(parsed).getTime();
     const prev = byDay.get(dayKey) ?? 0;
     byDay.set(dayKey, prev + 1);
   }

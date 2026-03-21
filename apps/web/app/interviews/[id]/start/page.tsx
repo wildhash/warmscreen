@@ -39,6 +39,7 @@ type VoiceCloneResponse = {
 export default function InterviewStartPage() {
   const params = useParams();
   const router = useRouter();
+  const interviewId = Array.isArray(params.id) ? params.id[0] : params.id;
   const [interview, setInterview] = useState<Interview | null>(null);
   const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -56,9 +57,9 @@ export default function InterviewStartPage() {
   const [cloneResponse, setCloneResponse] = useState<VoiceCloneResponse | null>(null);
 
   useEffect(() => {
-    if (!params.id) return;
+    if (!interviewId) return;
 
-    fetcher(`/api/interviews/${params.id}`)
+    fetcher(`/api/interviews/${interviewId}`)
       .then((data) => {
         setInterview(data.interview);
         setLoading(false);
@@ -67,17 +68,16 @@ export default function InterviewStartPage() {
         console.error('Failed to fetch interview:', err);
         setLoading(false);
       });
-  }, [params.id]);
+  }, [interviewId]);
 
   useEffect(() => {
-    const interviewId = Array.isArray(params.id) ? params.id[0] : params.id;
     if (!interviewId) return;
     if (loading) return;
 
     if (interview?.status === 'COMPLETED') {
       router.push(`/interviews/${interviewId}`);
     }
-  }, [interview?.status, loading, params.id, router]);
+  }, [interview?.status, loading, interviewId, router]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -99,9 +99,10 @@ export default function InterviewStartPage() {
   }, [voiceStatus]);
 
   const startInterview = async () => {
+    if (!interviewId) return;
     setStarting(true);
     try {
-      const data = await apiPost(`/api/interviews/${params.id}/start`, {});
+      const data = await apiPost(`/api/interviews/${interviewId}/start`, {});
       setInterview(data.interview);
       setQuestions(data.questions);
       await startVoiceSession(data.interview);
@@ -193,6 +194,7 @@ export default function InterviewStartPage() {
   };
 
   const submitResponse = async () => {
+    if (!interviewId) return;
     const currentQuestion = questions[currentQuestionIndex];
     if (!currentQuestion) {
       alert('Unable to submit response: question not found.');
@@ -206,7 +208,7 @@ export default function InterviewStartPage() {
 
     setSubmitting(true);
     try {
-      await apiPost(`/api/interviews/${params.id}/responses`, {
+      await apiPost(`/api/interviews/${interviewId}/responses`, {
         questionId: currentQuestion.id,
         transcript,
         duration: 0,
@@ -217,8 +219,8 @@ export default function InterviewStartPage() {
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex((prev) => prev + 1);
       } else {
-        await apiPost(`/api/interviews/${params.id}/finalize`, {});
-        router.push(`/interviews/${params.id}`);
+        await apiPost(`/api/interviews/${interviewId}/finalize`, {});
+        router.push(`/interviews/${interviewId}`);
       }
     } catch (err) {
       console.error('Failed to submit response:', err);
@@ -277,7 +279,7 @@ export default function InterviewStartPage() {
       <div className="page-container">
         <div className="page-content max-w-4xl">
           <div className="flex items-center justify-between gap-4 mb-6">
-            <Link href={`/interviews/${params.id}`} className="btn btn-ghost">
+            <Link href={interviewId ? `/interviews/${interviewId}` : '/interviews'} className="btn btn-ghost">
               <ArrowLeft size={14} />
               Back
             </Link>
@@ -409,7 +411,7 @@ export default function InterviewStartPage() {
     <div className="page-container">
       <div className="page-content">
         <div className="flex items-center justify-between gap-4 mb-6">
-          <Link href={`/interviews/${params.id}`} className="btn btn-ghost">
+          <Link href={interviewId ? `/interviews/${interviewId}` : '/interviews'} className="btn btn-ghost">
             <ArrowLeft size={14} />
             Back
           </Link>

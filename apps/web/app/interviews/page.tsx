@@ -140,7 +140,7 @@ export default function InterviewsPage() {
 
       if (livekitError) {
         setCreateNotice(
-          `Interview created successfully, but LiveKit agent initialization failed: ${livekitError}. You can retry initialization later.`
+          `Interview created successfully, but LiveKit agent initialization failed: ${livekitError}.`
         );
       }
     } catch (error: unknown) {
