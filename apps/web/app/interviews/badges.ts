@@ -15,5 +15,7 @@ export function getStatusBadgeClass(status: InterviewStatus) {
 export function getDecisionBadgeClass(decision: string) {
   const normalized = decision.toUpperCase();
   if (normalized.includes('NO_HIRE')) return 'badge badge-no-hire';
-  return 'badge badge-hire';
+  if (normalized.includes('STRONG_HIRE')) return 'badge badge-strong-hire';
+  if (normalized.includes('HIRE')) return 'badge badge-hire';
+  return 'badge badge-scheduled';
 }

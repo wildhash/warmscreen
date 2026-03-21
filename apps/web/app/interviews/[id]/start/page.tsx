@@ -125,7 +125,14 @@ export default function InterviewStartPage() {
         participantName: activeInterview.candidateName,
       });
       const raw = session.session;
-      setVoiceSession(raw && typeof raw.roomUrl === 'string' ? { roomUrl: raw.roomUrl } : null);
+      if (!raw || typeof raw.roomUrl !== 'string') {
+        setVoiceSession(null);
+        setVoiceStatus('idle');
+        setVoiceError('Unable to start voice agent: missing room URL in session response.');
+        throw new Error('Missing roomUrl in session response');
+      }
+
+      setVoiceSession({ roomUrl: raw.roomUrl });
       setVoiceStatus('active');
     } catch (err) {
       console.error('Failed to start voice session:', err);
@@ -252,7 +259,7 @@ export default function InterviewStartPage() {
     );
   }
 
-  if (interview.status === 'SCHEDULED' || questions.length === 0) {
+  if (questions.length === 0) {
     return (
       <div className="page-container">
         <div className="page-content max-w-4xl">
@@ -369,7 +376,11 @@ export default function InterviewStartPage() {
                 className="btn btn-primary px-10 py-4 text-[15px]"
               >
                 <Play size={14} />
-                {starting ? 'Starting…' : 'Start interview'}
+                {starting
+                  ? 'Starting…'
+                  : interview.status === 'IN_PROGRESS'
+                  ? 'Continue interview'
+                  : 'Start interview'}
               </button>
             </div>
           </div>
