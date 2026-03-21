@@ -23,9 +23,17 @@ type InterviewListItem = {
 };
 
 function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/).slice(0, 2);
-  const initials = parts.map((p) => p[0]).join('');
-  return initials.toUpperCase();
+  const trimmed = name.trim();
+  if (!trimmed) return '?';
+
+  const parts = trimmed.split(/\s+/).slice(0, 2);
+  const initials = parts
+    .map((p) => p[0])
+    .filter(Boolean)
+    .join('')
+    .toUpperCase();
+
+  return initials || '?';
 }
 
 function getErrorMessage(error: unknown) {
@@ -106,6 +114,7 @@ export default function InterviewsPage() {
       const result = await apiPost('/api/interviews', interviewData);
       
       // Initialize LiveKit agent for the interview
+      let livekitInitFailed = false;
       try {
         await apiPost('/api/interviews/livekit-agent/initialize', {
           interviewId: result.interview.id,
@@ -115,6 +124,12 @@ export default function InterviewsPage() {
         const errorDetails = getErrorMessage(agentError) ?? 'Unknown error';
         // Don't fail the entire operation if agent initialization fails
         setCreateError(`Interview created successfully, but LiveKit agent initialization failed: ${errorDetails}. You can retry initialization later.`);
+        livekitInitFailed = true;
+      }
+
+      if (livekitInitFailed) {
+        fetchInterviews();
+        return;
       }
 
       // Reset form and close modal
